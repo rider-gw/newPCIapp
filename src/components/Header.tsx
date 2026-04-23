@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { format } from 'date-fns';
-import { Auth } from 'aws-amplify';
+import { getCurrentUser } from '@aws-amplify/auth';
 
 const Header: FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('Loading...');
@@ -10,13 +10,12 @@ const Header: FC = () => {
   const [timezone, setTimezone] = useState<string>('');
 
   useEffect(() => {
-    // Fetch user data from Cognito
     const fetchUser = async () => {
       try {
-        const user = await Auth.currentAuthenticatedUser();
-        setCurrentUser(user.attributes.email || user.username);
-        const authTime = user.signInUserSession.accessToken.payload.auth_time;
-        setLastLoggedOn(format(new Date(authTime * 1000), 'yyyy-MM-dd hh:mm a'));
+        const user = await getCurrentUser();
+        setCurrentUser(user?.attributes?.email || user?.username || 'Unknown');
+        const authTime = user?.signInDetails?.authenticatedAt || Date.now();
+        setLastLoggedOn(format(new Date(authTime), 'yyyy-MM-dd hh:mm a'));
       } catch (error) {
         console.error('User not authenticated', error);
         setCurrentUser('Not logged in');
