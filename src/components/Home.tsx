@@ -1,6 +1,6 @@
-import React from 'react';
+import type { FC } from 'react';
 
-const Home: React.FC = () => {
+const Home: FC = () => {
   return (
     <div style={{ padding: '20px' }}>
       <h1>Home</h1>

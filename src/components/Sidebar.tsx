@@ -1,7 +1,7 @@
-import React from 'react';
+import type { FC } from 'react';
 import { Link } from 'react-router-dom';
 
-const Sidebar: React.FC = () => {
+const Sidebar: FC = () => {
   const handleLogout = () => {
     // In real app, Auth.signOut()
     alert('Logged out');

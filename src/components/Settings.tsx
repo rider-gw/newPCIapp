@@ -1,6 +1,6 @@
-import React from 'react';
+import type { FC } from 'react';
 
-const Settings: React.FC = () => {
+const Settings: FC = () => {
   return (
     <div style={{ padding: '20px' }}>
       <h1>Settings</h1>

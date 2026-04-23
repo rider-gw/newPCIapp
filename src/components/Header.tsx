@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { format } from 'date-fns';
 
-const Header: React.FC = () => {
+const Header: FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('Loading...');
   const [lastLoggedOn, setLastLoggedOn] = useState<string>('Loading...');
   const [currentDateTime, setCurrentDateTime] = useState<string>('');

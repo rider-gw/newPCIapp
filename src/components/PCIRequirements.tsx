@@ -1,6 +1,6 @@
-import React from 'react';
+import type { FC } from 'react';
 
-const PCIRequirements: React.FC = () => {
+const PCIRequirements: FC = () => {
   return (
     <div style={{ padding: '20px' }}>
       <h1>PCI Requirements</h1>
