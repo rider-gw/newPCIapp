@@ -1,10 +1,16 @@
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
+import { Auth } from 'aws-amplify';
 
 const Sidebar: FC = () => {
-  const handleLogout = () => {
-    // In real app, Auth.signOut()
-    alert('Logged out');
+  const handleLogout = async () => {
+    try {
+      await Auth.signOut();
+      alert('Logged out successfully');
+      // Optionally redirect to login page
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
   };
 
   return (
