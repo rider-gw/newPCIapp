@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { format } from 'date-fns';
-import { getCurrentUser } from '@aws-amplify/auth';
+import { fetchUserAttributes, getCurrentUser } from '@aws-amplify/auth';
 
 const Header: FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('Loading...');
@@ -13,9 +13,9 @@ const Header: FC = () => {
     const fetchUser = async () => {
       try {
         const user = await getCurrentUser();
-        setCurrentUser(user?.attributes?.email || user?.username || 'Unknown');
-        const authTime = user?.signInDetails?.authenticatedAt || Date.now();
-        setLastLoggedOn(format(new Date(authTime), 'yyyy-MM-dd hh:mm a'));
+        const attributes = await fetchUserAttributes();
+        setCurrentUser(attributes.email || user?.username || 'Unknown');
+        setLastLoggedOn('Session active');
       } catch (error) {
         console.error('User not authenticated', error);
         setCurrentUser('Not logged in');
