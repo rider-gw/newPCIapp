@@ -6,6 +6,8 @@ import Home from './components/Home';
 import Settings from './components/Settings';
 import PCIRequirements from './components/PCIRequirements';
 import Controls from './components/Controls';
+import Assets from './components/Assets';
+import Diagnostics from './components/Diagnostics';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/pci-requirements" element={<PCIRequirements />} />
               <Route path="/controls" element={<Controls />} />
+              <Route path="/assets" element={<Assets />} />
+              <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>
