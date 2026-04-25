@@ -8,7 +8,7 @@ import PCIRequirements from './components/PCIRequirements';
 
 function App() {
   return (
-    <Authenticator>
+    <Authenticator hideSignUp>
       {() => (
         <Router>
           <Layout>

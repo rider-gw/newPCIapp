@@ -2,6 +2,21 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Existing Cognito User Pool setup
+
+This app uses Amplify Auth with an existing Cognito User Pool.
+
+Set these environment variables in Amplify Hosting (or local `.env` files):
+
+- `VITE_COGNITO_USER_POOL_ID`
+- `VITE_COGNITO_USER_POOL_CLIENT_ID`
+
+Important for existing pools:
+
+- The app client must be from the same User Pool as the `userPoolId`.
+- The app client must not use a client secret (web apps cannot securely store one).
+- If you only allow existing users, keep sign-up disabled in the UI.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
