@@ -17,6 +17,16 @@ export interface StoredAsset extends AssetInput {
   createdAt: string
 }
 
+export interface AssetsDiagnostics {
+  tableName: string
+  region: string
+  identityPoolIdConfigured: boolean
+  userPoolIdConfigured: boolean
+  hasAwsCredentials: boolean
+  isSignedIn: boolean
+  error?: string
+}
+
 const tableName = import.meta.env.VITE_DDB_ASSETS_TABLE ?? 'assets'
 const region =
   import.meta.env.VITE_AWS_REGION ?? (import.meta.env.VITE_COGNITO_USER_POOL_ID?.split('_')[0] ?? 'us-west-2')
@@ -45,6 +55,35 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   return error.message
+}
+
+export const getAssetsDiagnostics = async (): Promise<AssetsDiagnostics> => {
+  const diagnostics: AssetsDiagnostics = {
+    tableName,
+    region,
+    identityPoolIdConfigured: Boolean(identityPoolId),
+    userPoolIdConfigured: Boolean(userPoolId),
+    hasAwsCredentials: false,
+    isSignedIn: false,
+  }
+
+  try {
+    const session = await fetchAuthSession()
+    diagnostics.isSignedIn = Boolean(session.tokens?.idToken)
+    diagnostics.hasAwsCredentials = Boolean(session.credentials)
+
+    if (!identityPoolId) {
+      diagnostics.error = 'VITE_COGNITO_IDENTITY_POOL_ID is missing.'
+    } else if (!diagnostics.isSignedIn) {
+      diagnostics.error = 'No Cognito user session found. Please sign in again.'
+    } else if (!diagnostics.hasAwsCredentials) {
+      diagnostics.error = 'Signed in but no AWS credentials are available from Cognito Identity Pool.'
+    }
+  } catch (error) {
+    diagnostics.error = getErrorMessage(error)
+  }
+
+  return diagnostics
 }
 
 const toAsset = (item: Record<string, unknown>): StoredAsset | null => {
