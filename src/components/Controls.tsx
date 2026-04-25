@@ -96,7 +96,7 @@ const Controls = () => {
       setAssets(loaded)
     } catch (loadError) {
       console.error(loadError)
-      setError('Could not load assets from DynamoDB. Check your AWS env variables and permissions.')
+      setError(loadError instanceof Error ? loadError.message : 'Could not load assets from DynamoDB.')
     }
   }
 
@@ -129,7 +129,7 @@ const Controls = () => {
       await loadAssets()
     } catch (saveError) {
       console.error(saveError)
-      setError('Failed to save asset to DynamoDB.')
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save asset to DynamoDB.')
     } finally {
       setIsSaving(false)
     }
@@ -168,7 +168,7 @@ const Controls = () => {
       await loadAssets()
     } catch (uploadError) {
       console.error(uploadError)
-      setError('Bulk upload failed. Verify spreadsheet format and DynamoDB access.')
+      setError(uploadError instanceof Error ? uploadError.message : 'Bulk upload failed.')
     } finally {
       setIsSaving(false)
       event.target.value = ''

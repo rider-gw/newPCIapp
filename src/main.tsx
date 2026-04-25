@@ -7,10 +7,15 @@ import App from './App.tsx'
 const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID ?? 'us-west-2_xc3HwXmSp'
 const userPoolClientId =
   import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID ?? '7npgkht7ib099i3akpbf9dvnkv'
+const identityPoolId = import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
 
 Amplify.configure({
   Auth: {
     Cognito: {
+      loginWith: {
+        username: true,
+      },
+      identityPoolId,
       userPoolId,
       userPoolClientId
     }

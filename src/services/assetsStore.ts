@@ -1,6 +1,5 @@
 import { fetchAuthSession } from 'aws-amplify/auth'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { fromCognitoIdentityPool } from '@aws-sdk/credential-providers'
 import { DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb'
 
 export const ASSET_TYPES = ['laptop', 'server', 'virtual', 'cloud', 'phone'] as const
@@ -19,9 +18,34 @@ export interface StoredAsset extends AssetInput {
 }
 
 const tableName = import.meta.env.VITE_DDB_ASSETS_TABLE ?? 'assets'
-const region = import.meta.env.VITE_AWS_REGION ?? 'us-west-2'
+const region =
+  import.meta.env.VITE_AWS_REGION ?? (import.meta.env.VITE_COGNITO_USER_POOL_ID?.split('_')[0] ?? 'us-west-2')
 const identityPoolId = import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
 const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID ?? 'us-west-2_xc3HwXmSp'
+
+const getErrorMessage = (error: unknown): string => {
+  if (!(error instanceof Error)) {
+    return 'An unknown error occurred while accessing DynamoDB.'
+  }
+
+  if (error.message.includes('VITE_COGNITO_IDENTITY_POOL_ID')) {
+    return 'Missing VITE_COGNITO_IDENTITY_POOL_ID. DynamoDB access from the app requires a Cognito Identity Pool linked to your User Pool.'
+  }
+
+  if (error.message.includes('No AWS credentials available')) {
+    return 'No AWS credentials available for DynamoDB. Link your Cognito User Pool to an Identity Pool and sign in again.'
+  }
+
+  if (error.name === 'AccessDeniedException' || error.name === 'UnauthorizedException') {
+    return `DynamoDB permission error: ${error.message}`
+  }
+
+  if (error.name === 'ResourceNotFoundException') {
+    return `DynamoDB table not found. Check that the ${tableName} table exists in ${region}.`
+  }
+
+  return error.message
+}
 
 const toAsset = (item: Record<string, unknown>): StoredAsset | null => {
   const assetName = item.assetName
@@ -59,19 +83,13 @@ const createClient = async (): Promise<DynamoDBDocumentClient> => {
   }
 
   const session = await fetchAuthSession()
-  const idToken = session.tokens?.idToken?.toString()
+  const credentials = session.credentials
 
-  if (!idToken) {
-    throw new Error('No Cognito id token found. Please sign in again.')
+  if (!credentials) {
+    throw new Error(
+      `No AWS credentials available. Confirm Cognito Identity Pool ${identityPoolId} is configured and linked to User Pool ${userPoolId}.`,
+    )
   }
-
-  const credentials = fromCognitoIdentityPool({
-    clientConfig: { region },
-    identityPoolId,
-    logins: {
-      [`cognito-idp.${region}.amazonaws.com/${userPoolId}`]: idToken,
-    },
-  })
 
   const ddbClient = new DynamoDBClient({
     region,
@@ -82,35 +100,43 @@ const createClient = async (): Promise<DynamoDBDocumentClient> => {
 }
 
 export const saveAssets = async (assets: AssetInput[]): Promise<void> => {
-  const client = await createClient()
-  const createdAt = new Date().toISOString()
+  try {
+    const client = await createClient()
+    const createdAt = new Date().toISOString()
 
-  for (const asset of assets) {
-    await client.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: {
-          assetId: crypto.randomUUID(),
-          assetName: asset.assetName,
-          assetType: asset.assetType,
-          purchaseCost: asset.purchaseCost,
-          createdAt,
-        },
-      }),
-    )
+    for (const asset of assets) {
+      await client.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            assetId: crypto.randomUUID(),
+            assetName: asset.assetName,
+            assetType: asset.assetType,
+            purchaseCost: asset.purchaseCost,
+            createdAt,
+          },
+        }),
+      )
+    }
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
   }
 }
 
 export const listAssets = async (): Promise<StoredAsset[]> => {
-  const client = await createClient()
-  const response = await client.send(
-    new ScanCommand({
-      TableName: tableName,
-    }),
-  )
+  try {
+    const client = await createClient()
+    const response = await client.send(
+      new ScanCommand({
+        TableName: tableName,
+      }),
+    )
 
-  return (response.Items ?? [])
-    .map((item) => toAsset(item as Record<string, unknown>))
-    .filter((item): item is StoredAsset => item !== null)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return (response.Items ?? [])
+      .map((item) => toAsset(item as Record<string, unknown>))
+      .filter((item): item is StoredAsset => item !== null)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
 }
