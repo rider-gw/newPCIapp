@@ -17,6 +17,33 @@ Important for existing pools:
 - The app client must not use a client secret (web apps cannot securely store one).
 - If you only allow existing users, keep sign-up disabled in the UI.
 
+## Controls and DynamoDB assets table
+
+The Controls page supports both:
+
+- Manual asset add
+- Bulk asset load from an Excel file (`.xlsx`/`.xls`)
+
+The Controls page also includes a downloadable Excel template with the required headers and a sample row.
+
+Both methods store data in the DynamoDB table named `assets`.
+
+Required asset fields:
+
+- Asset Name
+- Asset Type (`laptop`, `server`, `virtual`, `cloud`, `phone`)
+- Purchase cost
+
+Additional env vars required for direct DynamoDB access from the app:
+
+- `VITE_AWS_REGION`
+- `VITE_COGNITO_IDENTITY_POOL_ID`
+- `VITE_DDB_ASSETS_TABLE` (optional, defaults to `assets`)
+
+IAM note:
+
+- The authenticated role for your Cognito Identity Pool must allow `dynamodb:PutItem` and `dynamodb:Scan` on the `assets` table.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
