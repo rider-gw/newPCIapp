@@ -56,6 +56,9 @@ const Sidebar: FC = () => {
         <li style={{ marginBottom: '10px' }}>
           <Link to="/diagnostics" style={{ textDecoration: 'none', color: 'black' }}>Diagnostics</Link>
         </li>
+        <li style={{ marginBottom: '10px' }}>
+          <Link to="/admin" style={{ textDecoration: 'none', color: 'black' }}>Admin</Link>
+        </li>
         <li>
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'black', cursor: 'pointer' }}>Logout</button>
         </li>

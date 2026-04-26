@@ -48,6 +48,16 @@ const Controls: FC = () => {
           Open Diagnostics
         </Link>
       </div>
+
+      <div style={sectionStyle}>
+        <h3 style={{ marginTop: 0 }}>Admin</h3>
+        <p style={{ marginBottom: 0 }}>
+          View evidentiary audit logs and list all users with their Cognito group assignments.
+        </p>
+        <Link to="/admin" style={linkStyle}>
+          Open Admin
+        </Link>
+      </div>
     </section>
   )
 }

@@ -8,6 +8,7 @@ import PCIRequirements from './components/PCIRequirements';
 import Controls from './components/Controls';
 import Assets from './components/Assets';
 import Diagnostics from './components/Diagnostics';
+import Admin from './components/Admin';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
               <Route path="/controls" element={<Controls />} />
               <Route path="/assets" element={<Assets />} />
               <Route path="/diagnostics" element={<Diagnostics />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>
