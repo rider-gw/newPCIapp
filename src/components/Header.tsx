@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { format } from 'date-fns';
 import { fetchUserAttributes, getCurrentUser } from '@aws-amplify/auth';
+import { safeWriteAuditLog } from '../services/auditLogStore';
 
 const Header: FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('Loading...');
@@ -14,8 +15,14 @@ const Header: FC = () => {
       try {
         const user = await getCurrentUser();
         const attributes = await fetchUserAttributes();
-        setCurrentUser(attributes.email || user?.username || 'Unknown');
+        const resolvedUser = attributes.email || user?.username || 'Unknown';
+        setCurrentUser(resolvedUser);
         setLastLoggedOn('Session active');
+        await safeWriteAuditLog({
+          user: resolvedUser,
+          type: 'login',
+          details: 'User authenticated and opened application session',
+        });
       } catch (error) {
         console.error('User not authenticated', error);
         setCurrentUser('Not logged in');

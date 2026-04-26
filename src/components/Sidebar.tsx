@@ -1,10 +1,26 @@
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
-import { signOut } from '@aws-amplify/auth';
+import { fetchUserAttributes, getCurrentUser, signOut } from '@aws-amplify/auth';
+import { safeWriteAuditLog } from '../services/auditLogStore';
 
 const Sidebar: FC = () => {
   const handleLogout = async () => {
     try {
+      let userName = 'unknown';
+      try {
+        const user = await getCurrentUser();
+        const attributes = await fetchUserAttributes();
+        userName = attributes.email || user?.username || 'unknown';
+      } catch {
+        // Best-effort username lookup for audit logging.
+      }
+
+      await safeWriteAuditLog({
+        user: userName,
+        type: 'logout',
+        details: 'User selected logout from sidebar',
+      });
+
       await signOut();
       alert('Logged out successfully');
       // Optionally redirect to login page

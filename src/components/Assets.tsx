@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, CSSProperties, FormEvent } from 'react'
 import * as XLSX from 'xlsx'
+import { fetchUserAttributes, getCurrentUser } from '@aws-amplify/auth'
 import { ASSET_TYPES, listAssets, saveAssets } from '../services/assetsStore'
+import { safeWriteAuditLog } from '../services/auditLogStore'
 import type { AssetInput, AssetType, StoredAsset } from '../services/assetsStore'
 
 interface AssetFormState {
@@ -75,6 +77,16 @@ const downloadTemplate = () => {
   XLSX.writeFile(workbook, 'assets-template.xlsx')
 }
 
+const getAuditUser = async (): Promise<string> => {
+  try {
+    const user = await getCurrentUser()
+    const attributes = await fetchUserAttributes()
+    return attributes.email || user?.username || 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 const Assets = () => {
   const [formState, setFormState] = useState<AssetFormState>({
     assetName: '',
@@ -120,6 +132,12 @@ const Assets = () => {
           purchaseCost,
         },
       ])
+      const auditUser = await getAuditUser()
+      await safeWriteAuditLog({
+        user: auditUser,
+        type: 'change',
+        details: `Manual asset add: ${formState.assetName.trim()} (${formState.assetType})`,
+      })
       setMessage('Asset saved to DynamoDB.')
       setFormState({ assetName: '', assetType: 'laptop', purchaseCost: '' })
       await loadAssets()
@@ -160,6 +178,12 @@ const Assets = () => {
       }
 
       await saveAssets(mappedAssets)
+      const auditUser = await getAuditUser()
+      await safeWriteAuditLog({
+        user: auditUser,
+        type: 'change',
+        details: `Bulk asset import: ${mappedAssets.length} records`,
+      })
       setMessage(`${mappedAssets.length} assets saved to DynamoDB.`)
       await loadAssets()
     } catch (uploadError) {
