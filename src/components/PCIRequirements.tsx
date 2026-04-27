@@ -212,10 +212,9 @@ const summaryCardStyle: CSSProperties = {
 }
 
 const contentLayoutStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(320px, 420px) minmax(0, 1fr)',
+  display: 'flex',
+  flexDirection: 'column',
   gap: '20px',
-  alignItems: 'start',
 }
 
 const panelStyle: CSSProperties = {
