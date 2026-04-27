@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties, FC } from 'react'
+import { fetchUserAttributes, getCurrentUser } from '@aws-amplify/auth'
+import { safeWriteAuditLog } from '../services/auditLogStore'
+import { getRequirementNotes, saveRequirementNotes } from '../services/pciRequirementsStore'
 
 interface RequirementSection {
   id: string
@@ -238,6 +241,42 @@ const detailSectionStyle: CSSProperties = {
   marginTop: '14px',
 }
 
+const textareaStyle: CSSProperties = {
+  width: '100%',
+  minHeight: '100px',
+  borderRadius: '8px',
+  border: '1px solid #cbd5e1',
+  padding: '10px 12px',
+  fontSize: '0.95rem',
+  color: '#0f172a',
+  resize: 'vertical',
+  fontFamily: 'inherit',
+  lineHeight: 1.6,
+  boxSizing: 'border-box',
+}
+
+const saveButtonStyle: CSSProperties = {
+  marginTop: '14px',
+  padding: '10px 22px',
+  background: '#2563eb',
+  color: '#ffffff',
+  border: 'none',
+  borderRadius: '8px',
+  fontSize: '0.97rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+}
+
+const getAuditUser = async (): Promise<string> => {
+  try {
+    const user = await getCurrentUser()
+    const attributes = await fetchUserAttributes()
+    return attributes.email ?? user?.username ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 const badgeStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -271,8 +310,69 @@ const requirementsList: RequirementDetail[] = requirements.flatMap((family) =>
 
 const PCIRequirements: FC = () => {
   const [selectedRequirementId, setSelectedRequirementId] = useState(requirementsList[0]?.id ?? '')
+  const [notes, setNotes] = useState('')
+  const [advice, setAdvice] = useState('')
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [lastUpdatedAt, setLastUpdatedAt] = useState('')
+  const [lastUpdatedBy, setLastUpdatedBy] = useState('')
 
   const selectedRequirement = requirementsList.find((requirement) => requirement.id === selectedRequirementId) ?? requirementsList[0]
+
+  useEffect(() => {
+    const loadNotes = async () => {
+      setIsLoadingNotes(true)
+      setSaveMessage('')
+      setSaveError('')
+      setNotes('')
+      setAdvice('')
+      setLastUpdatedAt('')
+      setLastUpdatedBy('')
+      try {
+        const stored = await getRequirementNotes(selectedRequirementId)
+        if (stored) {
+          setNotes(stored.notes)
+          setAdvice(stored.advice)
+          setLastUpdatedAt(stored.updatedAt)
+          setLastUpdatedBy(stored.updatedBy)
+        }
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Could not load notes.')
+      } finally {
+        setIsLoadingNotes(false)
+      }
+    }
+    void loadNotes()
+  }, [selectedRequirementId])
+
+  const handleSelectRequirement = (id: string) => {
+    setSelectedRequirementId(id)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveMessage('')
+    setSaveError('')
+    try {
+      const user = await getAuditUser()
+      await saveRequirementNotes(selectedRequirementId, notes, advice, user)
+      await safeWriteAuditLog({
+        user,
+        type: 'change',
+        details: `PCI requirement notes updated: ${selectedRequirementId}`,
+      })
+      const now = new Date().toISOString()
+      setLastUpdatedAt(now)
+      setLastUpdatedBy(user)
+      setSaveMessage('Notes and advice saved.')
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save notes.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const selectedButtonStyle = (isSelected: boolean): CSSProperties => ({
     width: '100%',
@@ -333,10 +433,10 @@ const PCIRequirements: FC = () => {
               <button
                 key={requirement.id}
                 type="button"
-                onClick={() => setSelectedRequirementId(requirement.id)}
+                onClick={() => handleSelectRequirement(requirement.id)}
                 style={selectedButtonStyle(requirement.id === selectedRequirement?.id)}
               >
-                {requirement.id} {requirement.title}
+                {requirement.id} {requirement.definedApproach}
               </button>
             ))}
           </div>
@@ -374,6 +474,63 @@ const PCIRequirements: FC = () => {
           <div style={{ ...detailSectionStyle, backgroundColor: '#fff', borderStyle: 'dashed' }}>
             <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>Requirement Family Context</div>
             <p style={paragraphStyle}>{selectedRequirement.familyObjective}</p>
+          </div>
+
+          <div style={{ ...detailSectionStyle, backgroundColor: '#fffbeb', borderColor: '#fde68a' }}>
+            <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Notes & Advice</div>
+            <p style={{ ...paragraphStyle, marginBottom: '12px', fontSize: '0.9rem' }}>
+              Use these fields to contextualise this requirement for your environment. Notes and advice are saved to DynamoDB and are specific to each requirement.
+            </p>
+
+            {isLoadingNotes ? (
+              <p style={{ ...paragraphStyle, fontStyle: 'italic' }}>Loading saved notes…</p>
+            ) : (
+              <>
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                  Notes
+                </label>
+                <textarea
+                  style={textareaStyle}
+                  value={notes}
+                  onChange={(e) => { setNotes(e.target.value); setSaveMessage(''); }}
+                  placeholder="Add your environment-specific notes for this requirement…"
+                />
+
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', margin: '12px 0 6px' }}>
+                  Advice
+                </label>
+                <textarea
+                  style={textareaStyle}
+                  value={advice}
+                  onChange={(e) => { setAdvice(e.target.value); setSaveMessage(''); }}
+                  placeholder="Add implementation advice or recommendations for your team…"
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => { void handleSave() }}
+                    disabled={isSaving}
+                    style={{ ...saveButtonStyle, opacity: isSaving ? 0.65 : 1 }}
+                  >
+                    {isSaving ? 'Saving…' : 'Save Notes & Advice'}
+                  </button>
+
+                  {saveMessage && (
+                    <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.95rem' }}>{saveMessage}</span>
+                  )}
+                  {saveError && (
+                    <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.95rem' }}>{saveError}</span>
+                  )}
+                </div>
+
+                {lastUpdatedAt && (
+                  <p style={{ ...paragraphStyle, marginTop: '10px', fontSize: '0.85rem' }}>
+                    Last saved {new Date(lastUpdatedAt).toLocaleString()} by {lastUpdatedBy}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
