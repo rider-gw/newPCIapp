@@ -37,11 +37,12 @@ export async function uploadEvidenceFile(
   const timestamp = Date.now()
   const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const key = `evidence/${testId}/${timestamp}-${safeFileName}`
+  const fileBytes = new Uint8Array(await file.arrayBuffer())
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
-    Body: file,
+    Body: fileBytes,
     ContentType: file.type || 'application/octet-stream',
     ContentDisposition: `attachment; filename="${file.name}"`,
     Metadata: {
