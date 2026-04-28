@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import * as XLSX from 'xlsx'
 import {
   currentUserHasAdminAccess,
   listAuditLogs,
@@ -62,6 +63,28 @@ const Admin = () => {
     void loadAdminData()
   }, [])
 
+  const handleExportAuditLogs = () => {
+    if (auditLogs.length === 0) {
+      return
+    }
+
+    const exportRows = auditLogs.map((log) => ({
+      id: log.id,
+      dateTime: log.dateTime || 'N/A',
+      timezone: log.timezone || 'N/A',
+      user: log.user,
+      type: log.type,
+      details: log.details || '',
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit Logs')
+
+    const fileStamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    XLSX.writeFile(workbook, `audit-logs-${fileStamp}.xlsx`)
+  }
+
   return (
     <section style={{ padding: '24px', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Admin</h2>
@@ -86,7 +109,17 @@ const Admin = () => {
       {isAdmin && (
         <>
           <div style={sectionStyle}>
-            <h3 style={{ marginTop: 0 }}>Audit Logs</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0 }}>Audit Logs</h3>
+              <button
+                type="button"
+                onClick={handleExportAuditLogs}
+                disabled={isLoading || auditLogs.length === 0}
+                style={{ padding: '8px 12px', cursor: isLoading || auditLogs.length === 0 ? 'not-allowed' : 'pointer' }}
+              >
+                Export Audit Logs (Excel)
+              </button>
+            </div>
             {auditLogs.length === 0 ? (
               <p>No audit records found.</p>
             ) : (
