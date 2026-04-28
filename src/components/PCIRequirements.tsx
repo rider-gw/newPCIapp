@@ -2,7 +2,23 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, FC } from 'react'
 import { fetchUserAttributes, getCurrentUser } from '@aws-amplify/auth'
 import { safeWriteAuditLog } from '../services/auditLogStore'
+import { listAssets } from '../services/assetsStore'
+import type { StoredAsset } from '../services/assetsStore'
 import { getRequirementNotes, saveRequirementNotes } from '../services/pciRequirementsStore'
+import {
+  EVIDENCE_LINK_TYPES,
+  REQUIREMENT_TEST_STATUSES,
+  addRequirementEvidenceLink,
+  createRequirementTest,
+  listRequirementEvidenceLinks,
+  listRequirementTestsByRequirement,
+} from '../services/requirementTestingStore'
+import type {
+  EvidenceLinkType,
+  RequirementTestStatus,
+  StoredRequirementEvidenceLink,
+  StoredRequirementTest,
+} from '../services/requirementTestingStore'
 
 interface RequirementSection {
   id: string
@@ -266,6 +282,27 @@ const saveButtonStyle: CSSProperties = {
   cursor: 'pointer',
 }
 
+const inputStyle: CSSProperties = {
+  width: '100%',
+  height: '38px',
+  borderRadius: '8px',
+  border: '1px solid #cbd5e1',
+  padding: '0 10px',
+  fontSize: '0.92rem',
+  boxSizing: 'border-box',
+}
+
+const selectStyle: CSSProperties = {
+  ...inputStyle,
+  backgroundColor: '#ffffff',
+}
+
+const formGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '10px',
+}
+
 const getAuditUser = async (): Promise<string> => {
   try {
     const user = await getCurrentUser()
@@ -318,7 +355,67 @@ const PCIRequirements: FC = () => {
   const [lastUpdatedAt, setLastUpdatedAt] = useState('')
   const [lastUpdatedBy, setLastUpdatedBy] = useState('')
 
+  const [assets, setAssets] = useState<StoredAsset[]>([])
+  const [tests, setTests] = useState<StoredRequirementTest[]>([])
+  const [links, setLinks] = useState<StoredRequirementEvidenceLink[]>([])
+  const [selectedTestId, setSelectedTestId] = useState('')
+
+  const [isLoadingTests, setIsLoadingTests] = useState(false)
+  const [isSavingTest, setIsSavingTest] = useState(false)
+  const [testMessage, setTestMessage] = useState('')
+  const [testError, setTestError] = useState('')
+
+  const [isLoadingLinks, setIsLoadingLinks] = useState(false)
+  const [isSavingLink, setIsSavingLink] = useState(false)
+  const [linkMessage, setLinkMessage] = useState('')
+  const [linkError, setLinkError] = useState('')
+
+  const [testTitle, setTestTitle] = useState('')
+  const [testScopeSummary, setTestScopeSummary] = useState('')
+  const [testStatus, setTestStatus] = useState<RequirementTestStatus>('planned')
+  const [testSampleSize, setTestSampleSize] = useState('')
+  const [testPlannedDate, setTestPlannedDate] = useState('')
+
+  const [linkType, setLinkType] = useState<EvidenceLinkType>('asset')
+  const [linkReferenceId, setLinkReferenceId] = useState('')
+  const [linkLabel, setLinkLabel] = useState('')
+  const [linkNotes, setLinkNotes] = useState('')
+
   const selectedRequirement = requirementsList.find((requirement) => requirement.id === selectedRequirementId) ?? requirementsList[0]
+
+  const selectedTest = tests.find((test) => test.testId === selectedTestId)
+
+  const loadTestsForRequirement = async (requirementId: string) => {
+    setIsLoadingTests(true)
+    setTestError('')
+    setTestMessage('')
+    setSelectedTestId('')
+    setLinks([])
+    try {
+      const loadedTests = await listRequirementTestsByRequirement(requirementId)
+      setTests(loadedTests)
+    } catch (error) {
+      setTests([])
+      setTestError(error instanceof Error ? error.message : 'Could not load requirement tests.')
+    } finally {
+      setIsLoadingTests(false)
+    }
+  }
+
+  const loadLinksForTest = async (testId: string) => {
+    setIsLoadingLinks(true)
+    setLinkError('')
+    setLinkMessage('')
+    try {
+      const loadedLinks = await listRequirementEvidenceLinks(testId)
+      setLinks(loadedLinks)
+    } catch (error) {
+      setLinks([])
+      setLinkError(error instanceof Error ? error.message : 'Could not load evidence links.')
+    } finally {
+      setIsLoadingLinks(false)
+    }
+  }
 
   useEffect(() => {
     const loadNotes = async () => {
@@ -346,6 +443,32 @@ const PCIRequirements: FC = () => {
     void loadNotes()
   }, [selectedRequirementId])
 
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        const loadedAssets = await listAssets()
+        setAssets(loadedAssets)
+      } catch {
+        setAssets([])
+      }
+    }
+
+    void loadAssets()
+  }, [])
+
+  useEffect(() => {
+    void loadTestsForRequirement(selectedRequirementId)
+  }, [selectedRequirementId])
+
+  useEffect(() => {
+    if (!selectedTestId) {
+      setLinks([])
+      return
+    }
+
+    void loadLinksForTest(selectedTestId)
+  }, [selectedTestId])
+
   const handleSelectRequirement = (id: string) => {
     setSelectedRequirementId(id)
   }
@@ -370,6 +493,105 @@ const PCIRequirements: FC = () => {
       setSaveError(error instanceof Error ? error.message : 'Failed to save notes.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleCreateTest = async () => {
+    setIsSavingTest(true)
+    setTestError('')
+    setTestMessage('')
+
+    if (!testTitle.trim() || !testScopeSummary.trim()) {
+      setIsSavingTest(false)
+      setTestError('Test title and scope summary are required.')
+      return
+    }
+
+    const parsedSampleSize = testSampleSize.trim().length > 0 ? Number(testSampleSize) : undefined
+    if (parsedSampleSize !== undefined && (!Number.isFinite(parsedSampleSize) || parsedSampleSize < 0)) {
+      setIsSavingTest(false)
+      setTestError('Sample size must be a valid non-negative number.')
+      return
+    }
+
+    try {
+      const user = await getAuditUser()
+      const createdTest = await createRequirementTest(
+        {
+          requirementId: selectedRequirementId,
+          title: testTitle,
+          scopeSummary: testScopeSummary,
+          status: testStatus,
+          sampleSize: parsedSampleSize,
+          plannedDate: testPlannedDate,
+        },
+        user,
+      )
+
+      await safeWriteAuditLog({
+        user,
+        type: 'change',
+        details: `Requirement test created for ${selectedRequirementId}: ${createdTest.testId}`,
+      })
+
+      setTests((prev) => [createdTest, ...prev])
+      setSelectedTestId(createdTest.testId)
+      setTestTitle('')
+      setTestScopeSummary('')
+      setTestSampleSize('')
+      setTestPlannedDate('')
+      setTestStatus('planned')
+      setTestMessage('Requirement test session created.')
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Failed to create test session.')
+    } finally {
+      setIsSavingTest(false)
+    }
+  }
+
+  const handleAddEvidenceLink = async () => {
+    if (!selectedTestId) {
+      setLinkError('Select a test session before adding evidence links.')
+      return
+    }
+
+    if (!linkReferenceId.trim() || !linkLabel.trim()) {
+      setLinkError('Reference ID and label are required for an evidence link.')
+      return
+    }
+
+    setIsSavingLink(true)
+    setLinkError('')
+    setLinkMessage('')
+
+    try {
+      const user = await getAuditUser()
+      const createdLink = await addRequirementEvidenceLink(
+        {
+          testId: selectedTestId,
+          linkType,
+          referenceId: linkReferenceId,
+          label: linkLabel,
+          notes: linkNotes,
+        },
+        user,
+      )
+
+      await safeWriteAuditLog({
+        user,
+        type: 'change',
+        details: `Requirement evidence link added: ${createdLink.linkId} for ${selectedTestId}`,
+      })
+
+      setLinks((prev) => [createdLink, ...prev])
+      setLinkReferenceId('')
+      setLinkLabel('')
+      setLinkNotes('')
+      setLinkMessage('Evidence link added to test session.')
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : 'Failed to add evidence link.')
+    } finally {
+      setIsSavingLink(false)
     }
   }
 
@@ -528,6 +750,197 @@ const PCIRequirements: FC = () => {
                     Last saved {new Date(lastUpdatedAt).toLocaleString()} by {lastUpdatedBy}
                   </p>
                 )}
+              </>
+            )}
+          </div>
+
+          <div style={{ ...detailSectionStyle, backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }}>
+            <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Requirement Testing Sessions</div>
+            <p style={{ ...paragraphStyle, marginBottom: '12px', fontSize: '0.9rem' }}>
+              Create and manage test sessions for this requirement, then link assets, users, interviews, documents, and screenshots as evidence.
+            </p>
+
+            <div style={formGridStyle}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Test Title</label>
+                <input
+                  style={inputStyle}
+                  value={testTitle}
+                  onChange={(e) => setTestTitle(e.target.value)}
+                  placeholder="Quarterly test cycle"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Status</label>
+                <select
+                  style={selectStyle}
+                  value={testStatus}
+                  onChange={(e) => setTestStatus(e.target.value as RequirementTestStatus)}
+                >
+                  {REQUIREMENT_TEST_STATUSES.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Sample Size</label>
+                <input
+                  style={inputStyle}
+                  value={testSampleSize}
+                  onChange={(e) => setTestSampleSize(e.target.value)}
+                  placeholder="5"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Planned Date</label>
+                <input
+                  type="date"
+                  style={inputStyle}
+                  value={testPlannedDate}
+                  onChange={(e) => setTestPlannedDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginTop: '12px', marginBottom: '6px' }}>Scope Summary</label>
+            <textarea
+              style={textareaStyle}
+              value={testScopeSummary}
+              onChange={(e) => setTestScopeSummary(e.target.value)}
+              placeholder="Describe assets sampled, teams involved, and evidence plan..."
+            />
+
+            <button
+              type="button"
+              onClick={() => { void handleCreateTest() }}
+              disabled={isSavingTest}
+              style={{ ...saveButtonStyle, opacity: isSavingTest ? 0.65 : 1 }}
+            >
+              {isSavingTest ? 'Creating...' : 'Create Test Session'}
+            </button>
+
+            {testMessage && <p style={{ color: '#16a34a', marginTop: '10px', marginBottom: 0 }}>{testMessage}</p>}
+            {testError && <p style={{ color: '#dc2626', marginTop: '10px', marginBottom: 0 }}>{testError}</p>}
+
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Existing Sessions</div>
+              {isLoadingTests ? (
+                <p style={{ ...paragraphStyle, margin: 0 }}>Loading test sessions...</p>
+              ) : tests.length === 0 ? (
+                <p style={{ ...paragraphStyle, margin: 0 }}>No test sessions yet for requirement {selectedRequirementId}.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {tests.map((test) => (
+                    <button
+                      key={test.testId}
+                      type="button"
+                      onClick={() => setSelectedTestId(test.testId)}
+                      style={{
+                        ...selectedButtonStyle(test.testId === selectedTestId),
+                        fontWeight: 500,
+                      }}
+                    >
+                      {test.title} ({test.status}) • {new Date(test.createdAt).toLocaleDateString()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...detailSectionStyle, backgroundColor: '#f8fafc' }}>
+            <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Evidence Links</div>
+            {!selectedTest ? (
+              <p style={{ ...paragraphStyle, margin: 0 }}>Select a test session to add evidence links.</p>
+            ) : (
+              <>
+                <p style={{ ...paragraphStyle, marginBottom: '10px' }}>
+                  Selected session: <strong>{selectedTest.title}</strong>
+                </p>
+
+                <div style={formGridStyle}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Link Type</label>
+                    <select
+                      style={selectStyle}
+                      value={linkType}
+                      onChange={(e) => setLinkType(e.target.value as EvidenceLinkType)}
+                    >
+                      {EVIDENCE_LINK_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Reference ID</label>
+                    <input
+                      style={inputStyle}
+                      value={linkReferenceId}
+                      onChange={(e) => setLinkReferenceId(e.target.value)}
+                      placeholder={linkType === 'asset' ? 'asset-id' : 'reference-id'}
+                      list={linkType === 'asset' ? 'asset-reference-options' : undefined}
+                    />
+                    {linkType === 'asset' && assets.length > 0 && (
+                      <datalist id="asset-reference-options">
+                        {assets.map((asset) => (
+                          <option key={asset.assetId} value={asset.assetId}>
+                            {asset.assetName}
+                          </option>
+                        ))}
+                      </datalist>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Label</label>
+                    <input
+                      style={inputStyle}
+                      value={linkLabel}
+                      onChange={(e) => setLinkLabel(e.target.value)}
+                      placeholder="Interview with infrastructure lead"
+                    />
+                  </div>
+                </div>
+
+                <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginTop: '12px', marginBottom: '6px' }}>Notes</label>
+                <textarea
+                  style={textareaStyle}
+                  value={linkNotes}
+                  onChange={(e) => setLinkNotes(e.target.value)}
+                  placeholder="Context for this piece of evidence..."
+                />
+
+                <button
+                  type="button"
+                  onClick={() => { void handleAddEvidenceLink() }}
+                  disabled={isSavingLink}
+                  style={{ ...saveButtonStyle, opacity: isSavingLink ? 0.65 : 1 }}
+                >
+                  {isSavingLink ? 'Linking...' : 'Add Evidence Link'}
+                </button>
+
+                {linkMessage && <p style={{ color: '#16a34a', marginTop: '10px', marginBottom: 0 }}>{linkMessage}</p>}
+                {linkError && <p style={{ color: '#dc2626', marginTop: '10px', marginBottom: 0 }}>{linkError}</p>}
+
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Linked Evidence</div>
+                  {isLoadingLinks ? (
+                    <p style={{ ...paragraphStyle, margin: 0 }}>Loading links...</p>
+                  ) : links.length === 0 ? (
+                    <p style={{ ...paragraphStyle, margin: 0 }}>No linked evidence for this session yet.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {links.map((link) => (
+                        <div key={link.linkId} style={{ border: '1px solid #dbe4f0', borderRadius: '10px', padding: '10px 12px', background: '#fff' }}>
+                          <div style={{ color: '#0f172a', fontWeight: 600 }}>
+                            {link.linkType.toUpperCase()} • {link.label}
+                          </div>
+                          <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Reference: {link.referenceId}</div>
+                          {link.notes && <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Notes: {link.notes}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
