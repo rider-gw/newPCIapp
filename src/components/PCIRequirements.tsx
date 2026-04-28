@@ -949,28 +949,7 @@ const PCIRequirements: FC = () => {
                       ))}
                     </select>
                   </div>
-                  {(linkType === 'document' || linkType === 'screenshot') ? (
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
-                        {linkType === 'screenshot' ? 'Screenshot File' : 'Document File'}
-                      </label>
-                      <input
-                        type="file"
-                        accept={linkType === 'screenshot' ? 'image/*' : undefined}
-                        style={{ ...inputStyle, padding: '6px 10px', cursor: 'pointer' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null
-                          setSelectedFile(file)
-                          if (file && !linkLabel) setLinkLabel(file.name)
-                        }}
-                      />
-                      {selectedFile && (
-                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
-                          {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                        </div>
-                      )}
-                    </div>
-                  ) : (
+                  {linkType !== 'document' && linkType !== 'screenshot' && (
                     <div>
                       <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Reference ID</label>
                       <input
@@ -1001,6 +980,33 @@ const PCIRequirements: FC = () => {
                     />
                   </div>
                 </div>
+
+                {(linkType === 'document' || linkType === 'screenshot') && (
+                  <div style={{ marginTop: '12px', padding: '14px', background: '#eff6ff', border: '1px dashed #93c5fd', borderRadius: '10px' }}>
+                    <label style={{ display: 'block', fontWeight: 600, color: '#1d4ed8', marginBottom: '8px' }}>
+                      {linkType === 'screenshot' ? 'Upload Screenshot (image file)' : 'Upload Document (PDF, Word, etc.)'}
+                    </label>
+                    <input
+                      type="file"
+                      accept={linkType === 'screenshot' ? 'image/*' : undefined}
+                      style={{ display: 'block', width: '100%', cursor: 'pointer' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null
+                        setSelectedFile(file)
+                        if (file && !linkLabel) setLinkLabel(file.name)
+                      }}
+                    />
+                    {selectedFile ? (
+                      <div style={{ marginTop: '6px', fontSize: '0.875rem', color: '#1e40af', fontWeight: 500 }}>
+                        Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#64748b' }}>
+                        No file selected — choose a file above then click Add Evidence Link
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginTop: '12px', marginBottom: '6px' }}>Notes</label>
                 <textarea
