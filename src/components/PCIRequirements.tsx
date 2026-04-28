@@ -5,12 +5,13 @@ import { safeWriteAuditLog } from '../services/auditLogStore'
 import { listAssets } from '../services/assetsStore'
 import type { StoredAsset } from '../services/assetsStore'
 import { getRequirementNotes, saveRequirementNotes } from '../services/pciRequirementsStore'
-import { uploadEvidenceFile, getEvidenceFileUrl } from '../services/evidenceStore'
+import { uploadEvidenceFile, getEvidenceFileUrl, deleteEvidenceFile } from '../services/evidenceStore'
 import {
   EVIDENCE_LINK_TYPES,
   REQUIREMENT_TEST_STATUSES,
   addRequirementEvidenceLink,
   createRequirementTest,
+  deleteRequirementEvidenceLink,
   listRequirementEvidenceLinks,
   listRequirementTestsByRequirement,
 } from '../services/requirementTestingStore'
@@ -332,6 +333,30 @@ const paragraphStyle: CSSProperties = {
   lineHeight: 1.6,
 }
 
+const MAX_SCREENSHOT_SIZE_MB = 8
+const MAX_DOCUMENT_SIZE_MB = 25
+const DOCUMENT_ACCEPTED_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx']
+const DOCUMENT_ACCEPTED_MIME_PREFIXES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument',
+  'application/vnd.ms-',
+  'text/',
+]
+
+const getFileExtension = (fileName: string): string => {
+  const parts = fileName.toLowerCase().split('.')
+  return parts.length > 1 ? parts[parts.length - 1] : ''
+}
+
+const isAllowedDocumentFile = (file: File): boolean => {
+  const extension = getFileExtension(file.name)
+  if (DOCUMENT_ACCEPTED_EXTENSIONS.includes(extension)) {
+    return true
+  }
+  return DOCUMENT_ACCEPTED_MIME_PREFIXES.some((prefix) => file.type.toLowerCase().startsWith(prefix))
+}
+
 const requirementsList: RequirementDetail[] = requirements.flatMap((family) =>
   family.sections.map((section) => ({
     id: section.id,
@@ -345,13 +370,43 @@ const requirementsList: RequirementDetail[] = requirements.flatMap((family) =>
   })),
 )
 
-/** Small component that generates a presigned download URL on demand for S3-stored evidence files */
-const EvidenceFileLink: FC<{ s3Key: string; label: string }> = ({ s3Key, label }) => {
+/** Small component that generates a presigned URL and optionally renders image preview for screenshot evidence. */
+const EvidenceFileLink: FC<{ s3Key: string; label: string; previewImage?: boolean }> = ({
+  s3Key,
+  label,
+  previewImage = false,
+}) => {
   const [url, setUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (!previewImage) {
+      return
+    }
+
+    const loadPreview = async () => {
+      setIsLoading(true)
+      setError('')
+      try {
+        const signedUrl = await getEvidenceFileUrl(s3Key)
+        setUrl(signedUrl)
+      } catch {
+        setError('Could not load screenshot preview.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    void loadPreview()
+  }, [previewImage, s3Key])
+
   const handleOpen = async () => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     setIsLoading(true)
     setError('')
     try {
@@ -367,6 +422,15 @@ const EvidenceFileLink: FC<{ s3Key: string; label: string }> = ({ s3Key, label }
 
   return (
     <div style={{ fontSize: '0.9rem', marginTop: '4px' }}>
+      {previewImage && url && (
+        <div style={{ marginBottom: '8px' }}>
+          <img
+            src={url}
+            alt={label}
+            style={{ maxWidth: '260px', width: '100%', border: '1px solid #dbe4f0', borderRadius: '8px' }}
+          />
+        </div>
+      )}
       <button
         type="button"
         onClick={() => { void handleOpen() }}
@@ -431,6 +495,9 @@ const PCIRequirements: FC = () => {
   const [linkNotes, setLinkNotes] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [linkValidationError, setLinkValidationError] = useState('')
+  const [deletingLinkId, setDeletingLinkId] = useState('')
 
   const selectedRequirement = requirementsList.find((requirement) => requirement.id === selectedRequirementId) ?? requirementsList[0]
 
@@ -600,6 +667,73 @@ const PCIRequirements: FC = () => {
     }
   }
 
+  const validateEvidenceFile = (file: File, type: EvidenceLinkType): string => {
+    if (type === 'screenshot') {
+      if (!file.type.toLowerCase().startsWith('image/')) {
+        return 'Screenshots must be an image file (PNG, JPG, WEBP, etc.).'
+      }
+
+      const maxBytes = MAX_SCREENSHOT_SIZE_MB * 1024 * 1024
+      if (file.size > maxBytes) {
+        return `Screenshots must be ${MAX_SCREENSHOT_SIZE_MB}MB or smaller.`
+      }
+
+      return ''
+    }
+
+    if (type === 'document') {
+      if (!isAllowedDocumentFile(file)) {
+        return 'Document type is not supported. Allowed: PDF, Word, Excel, CSV, TXT, PowerPoint.'
+      }
+
+      const maxBytes = MAX_DOCUMENT_SIZE_MB * 1024 * 1024
+      if (file.size > maxBytes) {
+        return `Documents must be ${MAX_DOCUMENT_SIZE_MB}MB or smaller.`
+      }
+
+      return ''
+    }
+
+    return ''
+  }
+
+  const handleDeleteEvidenceLink = async (link: StoredRequirementEvidenceLink) => {
+    if (!selectedTestId) {
+      return
+    }
+
+    const confirmed = window.confirm(`Delete evidence link "${link.label}"?`)
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingLinkId(link.linkId)
+    setLinkError('')
+    setLinkMessage('')
+
+    try {
+      const user = await getAuditUser()
+      if (link.linkType === 'document' || link.linkType === 'screenshot') {
+        await deleteEvidenceFile(link.referenceId)
+      }
+
+      await deleteRequirementEvidenceLink(link.testId, link.linkId)
+
+      await safeWriteAuditLog({
+        user,
+        type: 'change',
+        details: `Requirement evidence link deleted: ${link.linkId} for ${selectedTestId}`,
+      })
+
+      setLinks((prev) => prev.filter((existing) => existing.linkId !== link.linkId))
+      setLinkMessage('Evidence link deleted.')
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : 'Failed to delete evidence link.')
+    } finally {
+      setDeletingLinkId('')
+    }
+  }
+
   const handleAddEvidenceLink = async () => {
     if (!selectedTestId) {
       setLinkError('Select a test session before adding evidence links.')
@@ -607,9 +741,10 @@ const PCIRequirements: FC = () => {
     }
 
     const isFileType = linkType === 'document' || linkType === 'screenshot'
+    setLinkValidationError('')
 
     if (isFileType && !selectedFile) {
-      setLinkError('Please choose a file to upload for this evidence type.')
+      setLinkValidationError('Please choose a file to upload for this evidence type.')
       return
     }
 
@@ -623,8 +758,17 @@ const PCIRequirements: FC = () => {
       return
     }
 
+    if (isFileType && selectedFile) {
+      const validationError = validateEvidenceFile(selectedFile, linkType)
+      if (validationError) {
+        setLinkValidationError(validationError)
+        return
+      }
+    }
+
     setIsSavingLink(true)
     setIsUploading(isFileType)
+    setUploadProgress(isFileType ? 2 : 0)
     setLinkError('')
     setLinkMessage('')
 
@@ -634,7 +778,9 @@ const PCIRequirements: FC = () => {
       let resolvedReferenceId = linkReferenceId
 
       if (isFileType && selectedFile) {
-        const uploadResult = await uploadEvidenceFile(selectedFile, selectedTestId)
+        const uploadResult = await uploadEvidenceFile(selectedFile, selectedTestId, {
+          onProgress: (percent) => setUploadProgress(percent),
+        })
         resolvedReferenceId = uploadResult.key
       }
 
@@ -660,12 +806,16 @@ const PCIRequirements: FC = () => {
       setLinkLabel('')
       setLinkNotes('')
       setSelectedFile(null)
+      setUploadProgress(100)
       setLinkMessage('Evidence link added to test session.')
     } catch (error) {
       setLinkError(error instanceof Error ? error.message : 'Failed to add evidence link.')
     } finally {
       setIsSavingLink(false)
       setIsUploading(false)
+      if (isFileType) {
+        setTimeout(() => setUploadProgress(0), 600)
+      }
     }
   }
 
@@ -942,6 +1092,8 @@ const PCIRequirements: FC = () => {
                         setLinkType(e.target.value as EvidenceLinkType)
                         setSelectedFile(null)
                         setLinkReferenceId('')
+                        setLinkValidationError('')
+                        setUploadProgress(0)
                       }}
                     >
                       {EVIDENCE_LINK_TYPES.map((type) => (
@@ -988,14 +1140,28 @@ const PCIRequirements: FC = () => {
                     </label>
                     <input
                       type="file"
-                      accept={linkType === 'screenshot' ? 'image/*' : undefined}
+                      accept={linkType === 'screenshot' ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx'}
                       style={{ display: 'block', width: '100%', cursor: 'pointer' }}
                       onChange={(e) => {
                         const file = e.target.files?.[0] ?? null
                         setSelectedFile(file)
+                        setLinkValidationError('')
+                        setUploadProgress(0)
                         if (file && !linkLabel) setLinkLabel(file.name)
+
+                        if (file) {
+                          const validationError = validateEvidenceFile(file, linkType)
+                          if (validationError) {
+                            setLinkValidationError(validationError)
+                          }
+                        }
                       }}
                     />
+                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#475569' }}>
+                      {linkType === 'screenshot'
+                        ? `Accepted: image files up to ${MAX_SCREENSHOT_SIZE_MB}MB`
+                        : `Accepted: PDF, Word, Excel, CSV, TXT, PowerPoint up to ${MAX_DOCUMENT_SIZE_MB}MB`}
+                    </div>
                     {selectedFile ? (
                       <div style={{ marginTop: '6px', fontSize: '0.875rem', color: '#1e40af', fontWeight: 500 }}>
                         Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
@@ -1003,6 +1169,31 @@ const PCIRequirements: FC = () => {
                     ) : (
                       <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#64748b' }}>
                         No file selected — choose a file above then click Add Evidence Link
+                      </div>
+                    )}
+
+                    {isUploading && (
+                      <div style={{ marginTop: '8px' }}>
+                        <div style={{ fontSize: '0.82rem', color: '#1e40af', marginBottom: '4px' }}>
+                          Upload progress: {uploadProgress}%
+                        </div>
+                        <div style={{ width: '100%', height: '8px', background: '#dbeafe', borderRadius: '999px' }}>
+                          <div
+                            style={{
+                              width: `${uploadProgress}%`,
+                              height: '100%',
+                              background: '#2563eb',
+                              borderRadius: '999px',
+                              transition: 'width 180ms ease',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {linkValidationError && (
+                      <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>
+                        {linkValidationError}
                       </div>
                     )}
                   </div>
@@ -1038,11 +1229,34 @@ const PCIRequirements: FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {links.map((link) => (
                         <div key={link.linkId} style={{ border: '1px solid #dbe4f0', borderRadius: '10px', padding: '10px 12px', background: '#fff' }}>
-                          <div style={{ color: '#0f172a', fontWeight: 600 }}>
-                            {link.linkType.toUpperCase()} • {link.label}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ color: '#0f172a', fontWeight: 600 }}>
+                              {link.linkType.toUpperCase()} • {link.label}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { void handleDeleteEvidenceLink(link) }}
+                              disabled={deletingLinkId === link.linkId}
+                              style={{
+                                border: '1px solid #fecaca',
+                                background: '#fff1f2',
+                                color: '#b91c1c',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: deletingLinkId === link.linkId ? 'wait' : 'pointer',
+                              }}
+                            >
+                              {deletingLinkId === link.linkId ? 'Deleting...' : 'Delete'}
+                            </button>
                           </div>
                           {(link.linkType === 'document' || link.linkType === 'screenshot') ? (
-                            <EvidenceFileLink s3Key={link.referenceId} label={link.label} />
+                            <EvidenceFileLink
+                              s3Key={link.referenceId}
+                              label={link.label}
+                              previewImage={link.linkType === 'screenshot'}
+                            />
                           ) : (
                             <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Reference: {link.referenceId}</div>
                           )}

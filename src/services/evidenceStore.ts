@@ -32,12 +32,20 @@ async function getS3Client(): Promise<S3Client> {
 export async function uploadEvidenceFile(
   file: File,
   testId: string,
+  options?: { onProgress?: (percent: number) => void },
 ): Promise<{ key: string; fileName: string; fileSize: number; contentType: string }> {
+  const reportProgress = (value: number) => {
+    options?.onProgress?.(Math.max(0, Math.min(100, value)))
+  }
+
+  reportProgress(5)
   const s3 = await getS3Client()
   const timestamp = Date.now()
   const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const key = `evidence/${testId}/${timestamp}-${safeFileName}`
+  reportProgress(25)
   const fileBytes = new Uint8Array(await file.arrayBuffer())
+  reportProgress(60)
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
@@ -53,6 +61,7 @@ export async function uploadEvidenceFile(
   })
 
   await s3.send(command)
+  reportProgress(100)
 
   return {
     key,

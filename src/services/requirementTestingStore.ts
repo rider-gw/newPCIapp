@@ -2,6 +2,7 @@ import { fetchAuthSession } from 'aws-amplify/auth'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import {
   DynamoDBDocumentClient,
+  DeleteCommand,
   PutCommand,
   QueryCommand,
   ScanCommand,
@@ -268,4 +269,20 @@ export const listRequirementEvidenceLinks = async (
     .map((item) => toStoredRequirementEvidenceLink(item as Record<string, unknown>))
     .filter((item): item is StoredRequirementEvidenceLink => item !== null)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export const deleteRequirementEvidenceLink = async (
+  testId: string,
+  linkId: string,
+): Promise<void> => {
+  const client = await createClient()
+  await client.send(
+    new DeleteCommand({
+      TableName: linksTableName,
+      Key: {
+        testId,
+        linkId,
+      },
+    }),
+  )
 }
