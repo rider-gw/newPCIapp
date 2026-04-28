@@ -6,31 +6,22 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { fromCognitoIdentityPool } from '@aws-sdk/credential-providers'
 
 const bucketName = import.meta.env.VITE_S3_EVIDENCE_BUCKET ?? 'pci-evidence-uploads'
 const region =
   import.meta.env.VITE_AWS_REGION ?? (import.meta.env.VITE_COGNITO_USER_POOL_ID?.split('_')[0] ?? 'us-west-2')
-const identityPoolId = import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID
 
 async function getS3Client(): Promise<S3Client> {
   const session = await fetchAuthSession()
-  const idToken = session.tokens?.idToken?.toString()
+  const credentials = session.credentials
 
-  if (!idToken || !identityPoolId) {
-    throw new Error('Not authenticated or identity pool not configured')
+  if (!credentials) {
+    throw new Error('Not authenticated — no AWS credentials available.')
   }
-
-  const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID as string
-  const providerKey = `cognito-idp.${region}.amazonaws.com/${userPoolId}`
 
   return new S3Client({
     region,
-    credentials: fromCognitoIdentityPool({
-      clientConfig: { region },
-      identityPoolId,
-      logins: { [providerKey]: idToken },
-    }),
+    credentials,
   })
 }
 
