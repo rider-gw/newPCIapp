@@ -5,6 +5,7 @@ import { safeWriteAuditLog } from '../services/auditLogStore'
 import { listAssets } from '../services/assetsStore'
 import type { StoredAsset } from '../services/assetsStore'
 import { getRequirementNotes, saveRequirementNotes } from '../services/pciRequirementsStore'
+import { uploadEvidenceFile, getEvidenceFileUrl } from '../services/evidenceStore'
 import {
   EVIDENCE_LINK_TYPES,
   REQUIREMENT_TEST_STATUSES,
@@ -344,6 +345,54 @@ const requirementsList: RequirementDetail[] = requirements.flatMap((family) =>
   })),
 )
 
+/** Small component that generates a presigned download URL on demand for S3-stored evidence files */
+const EvidenceFileLink: FC<{ s3Key: string; label: string }> = ({ s3Key, label }) => {
+  const [url, setUrl] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleOpen = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const signedUrl = await getEvidenceFileUrl(s3Key)
+      setUrl(signedUrl)
+      window.open(signedUrl, '_blank', 'noopener,noreferrer')
+    } catch {
+      setError('Could not generate download link.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ fontSize: '0.9rem', marginTop: '4px' }}>
+      <button
+        type="button"
+        onClick={() => { void handleOpen() }}
+        disabled={isLoading}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#2563eb',
+          cursor: isLoading ? 'wait' : 'pointer',
+          padding: 0,
+          textDecoration: 'underline',
+          fontSize: '0.9rem',
+        }}
+      >
+        {isLoading ? 'Generating link...' : `Download / View: ${label}`}
+      </button>
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', fontSize: '0.85rem', color: '#64748b' }}>
+          (direct link)
+        </a>
+      )}
+      {error && <span style={{ color: '#dc2626', marginLeft: '8px' }}>{error}</span>}
+    </div>
+  )
+}
+
 const PCIRequirements: FC = () => {
   const [selectedRequirementId, setSelectedRequirementId] = useState(requirementsList[0]?.id ?? '')
   const [notes, setNotes] = useState('')
@@ -380,6 +429,8 @@ const PCIRequirements: FC = () => {
   const [linkReferenceId, setLinkReferenceId] = useState('')
   const [linkLabel, setLinkLabel] = useState('')
   const [linkNotes, setLinkNotes] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const selectedRequirement = requirementsList.find((requirement) => requirement.id === selectedRequirementId) ?? requirementsList[0]
 
@@ -555,22 +606,43 @@ const PCIRequirements: FC = () => {
       return
     }
 
-    if (!linkReferenceId.trim() || !linkLabel.trim()) {
+    const isFileType = linkType === 'document' || linkType === 'screenshot'
+
+    if (isFileType && !selectedFile) {
+      setLinkError('Please choose a file to upload for this evidence type.')
+      return
+    }
+
+    if (!isFileType && (!linkReferenceId.trim() || !linkLabel.trim())) {
       setLinkError('Reference ID and label are required for an evidence link.')
       return
     }
 
+    if (isFileType && !linkLabel.trim()) {
+      setLinkError('Please provide a label describing this evidence file.')
+      return
+    }
+
     setIsSavingLink(true)
+    setIsUploading(isFileType)
     setLinkError('')
     setLinkMessage('')
 
     try {
       const user = await getAuditUser()
+
+      let resolvedReferenceId = linkReferenceId
+
+      if (isFileType && selectedFile) {
+        const uploadResult = await uploadEvidenceFile(selectedFile, selectedTestId)
+        resolvedReferenceId = uploadResult.key
+      }
+
       const createdLink = await addRequirementEvidenceLink(
         {
           testId: selectedTestId,
           linkType,
-          referenceId: linkReferenceId,
+          referenceId: resolvedReferenceId,
           label: linkLabel,
           notes: linkNotes,
         },
@@ -587,11 +659,13 @@ const PCIRequirements: FC = () => {
       setLinkReferenceId('')
       setLinkLabel('')
       setLinkNotes('')
+      setSelectedFile(null)
       setLinkMessage('Evidence link added to test session.')
     } catch (error) {
       setLinkError(error instanceof Error ? error.message : 'Failed to add evidence link.')
     } finally {
       setIsSavingLink(false)
+      setIsUploading(false)
     }
   }
 
@@ -864,39 +938,66 @@ const PCIRequirements: FC = () => {
                     <select
                       style={selectStyle}
                       value={linkType}
-                      onChange={(e) => setLinkType(e.target.value as EvidenceLinkType)}
+                      onChange={(e) => {
+                        setLinkType(e.target.value as EvidenceLinkType)
+                        setSelectedFile(null)
+                        setLinkReferenceId('')
+                      }}
                     >
                       {EVIDENCE_LINK_TYPES.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Reference ID</label>
-                    <input
-                      style={inputStyle}
-                      value={linkReferenceId}
-                      onChange={(e) => setLinkReferenceId(e.target.value)}
-                      placeholder={linkType === 'asset' ? 'asset-id' : 'reference-id'}
-                      list={linkType === 'asset' ? 'asset-reference-options' : undefined}
-                    />
-                    {linkType === 'asset' && assets.length > 0 && (
-                      <datalist id="asset-reference-options">
-                        {assets.map((asset) => (
-                          <option key={asset.assetId} value={asset.assetId}>
-                            {asset.assetName}
-                          </option>
-                        ))}
-                      </datalist>
-                    )}
-                  </div>
+                  {(linkType === 'document' || linkType === 'screenshot') ? (
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                        {linkType === 'screenshot' ? 'Screenshot File' : 'Document File'}
+                      </label>
+                      <input
+                        type="file"
+                        accept={linkType === 'screenshot' ? 'image/*' : undefined}
+                        style={{ ...inputStyle, padding: '6px 10px', cursor: 'pointer' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null
+                          setSelectedFile(file)
+                          if (file && !linkLabel) setLinkLabel(file.name)
+                        }}
+                      />
+                      {selectedFile && (
+                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px' }}>
+                          {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Reference ID</label>
+                      <input
+                        style={inputStyle}
+                        value={linkReferenceId}
+                        onChange={(e) => setLinkReferenceId(e.target.value)}
+                        placeholder={linkType === 'asset' ? 'asset-id' : 'reference-id'}
+                        list={linkType === 'asset' ? 'asset-reference-options' : undefined}
+                      />
+                      {linkType === 'asset' && assets.length > 0 && (
+                        <datalist id="asset-reference-options">
+                          {assets.map((asset) => (
+                            <option key={asset.assetId} value={asset.assetId}>
+                              {asset.assetName}
+                            </option>
+                          ))}
+                        </datalist>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>Label</label>
                     <input
                       style={inputStyle}
                       value={linkLabel}
                       onChange={(e) => setLinkLabel(e.target.value)}
-                      placeholder="Interview with infrastructure lead"
+                      placeholder={linkType === 'document' || linkType === 'screenshot' ? 'Network diagram Q1 2026' : 'Interview with infrastructure lead'}
                     />
                   </div>
                 </div>
@@ -915,7 +1016,7 @@ const PCIRequirements: FC = () => {
                   disabled={isSavingLink}
                   style={{ ...saveButtonStyle, opacity: isSavingLink ? 0.65 : 1 }}
                 >
-                  {isSavingLink ? 'Linking...' : 'Add Evidence Link'}
+                  {isUploading ? 'Uploading...' : isSavingLink ? 'Linking...' : 'Add Evidence Link'}
                 </button>
 
                 {linkMessage && <p style={{ color: '#16a34a', marginTop: '10px', marginBottom: 0 }}>{linkMessage}</p>}
@@ -934,7 +1035,11 @@ const PCIRequirements: FC = () => {
                           <div style={{ color: '#0f172a', fontWeight: 600 }}>
                             {link.linkType.toUpperCase()} • {link.label}
                           </div>
-                          <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Reference: {link.referenceId}</div>
+                          {(link.linkType === 'document' || link.linkType === 'screenshot') ? (
+                            <EvidenceFileLink s3Key={link.referenceId} label={link.label} />
+                          ) : (
+                            <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Reference: {link.referenceId}</div>
+                          )}
                           {link.notes && <div style={{ ...paragraphStyle, fontSize: '0.9rem' }}>Notes: {link.notes}</div>}
                         </div>
                       ))}
