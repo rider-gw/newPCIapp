@@ -59,6 +59,15 @@ const Sidebar: FC = () => {
         <li style={{ marginBottom: '10px' }}>
           <Link to="/admin" style={{ textDecoration: 'none', color: 'black' }}>Admin</Link>
         </li>
+        <li style={{ marginBottom: '10px' }}>
+          <Link to="/continuous-audit" style={{ textDecoration: 'none', color: 'black' }}>Continuous Audit</Link>
+        </li>
+        <li style={{ marginBottom: '10px' }}>
+          <Link to="/current-audit" style={{ textDecoration: 'none', color: 'black' }}>Current Audit</Link>
+        </li>
+        <li style={{ marginBottom: '10px' }}>
+          <Link to="/past-audits" style={{ textDecoration: 'none', color: 'black' }}>Past Audits</Link>
+        </li>
         <li>
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'black', cursor: 'pointer' }}>Logout</button>
         </li>

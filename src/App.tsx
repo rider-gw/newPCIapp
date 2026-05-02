@@ -9,6 +9,9 @@ import Controls from './components/Controls';
 import Assets from './components/Assets';
 import Diagnostics from './components/Diagnostics';
 import Admin from './components/Admin';
+import ContinuousAudit from './components/ContinuousAudit';
+import CurrentAudit from './components/CurrentAudit';
+import PastAudits from './components/PastAudits';
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
               <Route path="/assets" element={<Assets />} />
               <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/continuous-audit" element={<ContinuousAudit />} />
+              <Route path="/current-audit" element={<CurrentAudit />} />
+              <Route path="/past-audits" element={<PastAudits />} />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>
