@@ -60,7 +60,24 @@ const Sidebar: FC = () => {
           <Link to="/admin" style={{ textDecoration: 'none', color: 'black' }}>Admin</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/continuous-audit" style={{ textDecoration: 'none', color: 'black' }}>Continuous Audit</Link>
+          <Link to="/continuous-monitoring" style={{ textDecoration: 'none', color: 'black' }}>Continuous Monitoring</Link>
+          <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+            <li style={{ marginBottom: '8px' }}>
+              <Link to="/continuous-monitoring/home" style={{ textDecoration: 'none', color: 'black' }}>Home</Link>
+            </li>
+            <li style={{ marginBottom: '8px' }}>
+              <Link to="/continuous-monitoring/set-rules" style={{ textDecoration: 'none', color: 'black' }}>Set Rules</Link>
+            </li>
+            <li style={{ marginBottom: '8px' }}>
+              <Link to="/continuous-monitoring/reports" style={{ textDecoration: 'none', color: 'black' }}>Reports</Link>
+            </li>
+            <li style={{ marginBottom: '8px' }}>
+              <Link to="/continuous-monitoring/new-modify-rule" style={{ textDecoration: 'none', color: 'black' }}>New/Modify Rule</Link>
+            </li>
+            <li>
+              <Link to="/continuous-monitoring/test-rule" style={{ textDecoration: 'none', color: 'black' }}>Test Rule</Link>
+            </li>
+          </ul>
         </li>
         <li style={{ marginBottom: '10px' }}>
           <Link to="/current-audit" style={{ textDecoration: 'none', color: 'black' }}>Current Audit</Link>

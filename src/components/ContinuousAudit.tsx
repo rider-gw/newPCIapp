@@ -3,7 +3,7 @@ import type { FC } from 'react';
 const ContinuousAudit: FC = () => {
   return (
     <div style={{ padding: '20px' }}>
-      <h1>Continuous Audit</h1>
+      <h1>Continuous Monitoring</h1>
       <p>
         This page is designed to allow you to plan for requirements that require you to
         undertake and maintain logs and records of compliance on a regular basis,

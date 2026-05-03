@@ -12,6 +12,11 @@ import Admin from './components/Admin';
 import ContinuousAudit from './components/ContinuousAudit';
 import CurrentAudit from './components/CurrentAudit';
 import PastAudits from './components/PastAudits';
+import ContinuousMonitoringHome from './components/ContinuousMonitoringHome';
+import ContinuousMonitoringSetRules from './components/ContinuousMonitoringSetRules';
+import ContinuousMonitoringReports from './components/ContinuousMonitoringReports';
+import ContinuousMonitoringRuleEditor from './components/ContinuousMonitoringRuleEditor';
+import ContinuousMonitoringTestRule from './components/ContinuousMonitoringTestRule';
 
 function App() {
   return (
@@ -27,7 +32,12 @@ function App() {
               <Route path="/assets" element={<Assets />} />
               <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="/admin" element={<Admin />} />
-              <Route path="/continuous-audit" element={<ContinuousAudit />} />
+              <Route path="/continuous-monitoring" element={<ContinuousAudit />} />
+              <Route path="/continuous-monitoring/home" element={<ContinuousMonitoringHome />} />
+              <Route path="/continuous-monitoring/set-rules" element={<ContinuousMonitoringSetRules />} />
+              <Route path="/continuous-monitoring/reports" element={<ContinuousMonitoringReports />} />
+              <Route path="/continuous-monitoring/new-modify-rule" element={<ContinuousMonitoringRuleEditor />} />
+              <Route path="/continuous-monitoring/test-rule" element={<ContinuousMonitoringTestRule />} />
               <Route path="/current-audit" element={<CurrentAudit />} />
               <Route path="/past-audits" element={<PastAudits />} />
               <Route path="/" element={<Home />} />
