@@ -9,6 +9,7 @@ import Controls from './components/Controls';
 import Assets from './components/Assets';
 import Diagnostics from './components/Diagnostics';
 import Admin from './components/Admin';
+import Audits from './components/Audits';
 import ContinuousAudit from './components/ContinuousAudit';
 import CurrentAudit from './components/CurrentAudit';
 import PastAudits from './components/PastAudits';
@@ -32,6 +33,7 @@ function App() {
               <Route path="/assets" element={<Assets />} />
               <Route path="/diagnostics" element={<Diagnostics />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/audits" element={<Audits />} />
               <Route path="/continuous-monitoring" element={<ContinuousAudit />} />
               <Route path="/continuous-monitoring/home" element={<ContinuousMonitoringHome />} />
               <Route path="/continuous-monitoring/set-rules" element={<ContinuousMonitoringSetRules />} />

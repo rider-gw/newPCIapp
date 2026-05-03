@@ -81,30 +81,35 @@ const Sidebar: FC = () => {
           <Link to="/admin" style={navButtonStyle}>Admin</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/continuous-monitoring" style={navButtonStyle}>Continuous Monitoring</Link>
+          <Link to="/audits" style={navButtonStyle}>Audits</Link>
           <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/home" style={subNavButtonStyle}>Home</Link>
+              <Link to="/current-audit" style={subNavButtonStyle}>Current Audit</Link>
             </li>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/set-rules" style={subNavButtonStyle}>Set Rules</Link>
-            </li>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/reports" style={subNavButtonStyle}>Reports</Link>
-            </li>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/new-modify-rule" style={subNavButtonStyle}>New/Modify Rule</Link>
+              <Link to="/continuous-monitoring" style={subNavButtonStyle}>Continuous Monitoring</Link>
+              <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+                <li style={{ marginBottom: '8px' }}>
+                  <Link to="/continuous-monitoring/home" style={subNavButtonStyle}>Home</Link>
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  <Link to="/continuous-monitoring/set-rules" style={subNavButtonStyle}>Set Rules</Link>
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  <Link to="/continuous-monitoring/reports" style={subNavButtonStyle}>Reports</Link>
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  <Link to="/continuous-monitoring/new-modify-rule" style={subNavButtonStyle}>New/Modify Rule</Link>
+                </li>
+                <li>
+                  <Link to="/continuous-monitoring/test-rule" style={subNavButtonStyle}>Test Rule</Link>
+                </li>
+              </ul>
             </li>
             <li>
-              <Link to="/continuous-monitoring/test-rule" style={subNavButtonStyle}>Test Rule</Link>
+              <Link to="/past-audits" style={subNavButtonStyle}>Past Audits</Link>
             </li>
           </ul>
-        </li>
-        <li style={{ marginBottom: '10px' }}>
-          <Link to="/current-audit" style={navButtonStyle}>Current Audit</Link>
-        </li>
-        <li style={{ marginBottom: '10px' }}>
-          <Link to="/past-audits" style={navButtonStyle}>Past Audits</Link>
         </li>
         <li>
           <button onClick={handleLogout} style={{ ...navButtonStyle, cursor: 'pointer', textAlign: 'left' }}>Logout</button>
