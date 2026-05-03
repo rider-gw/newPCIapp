@@ -63,9 +63,6 @@ const Sidebar: FC = () => {
           <Link to="/home" style={navButtonStyle}>Home</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/settings" style={navButtonStyle}>Settings</Link>
-        </li>
-        <li style={{ marginBottom: '10px' }}>
           <Link to="/pci-requirements" style={navButtonStyle}>PCI Requirements</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
@@ -75,10 +72,15 @@ const Sidebar: FC = () => {
           <Link to="/assets" style={navButtonStyle}>Assets</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/diagnostics" style={navButtonStyle}>Diagnostics</Link>
-        </li>
-        <li style={{ marginBottom: '10px' }}>
           <Link to="/admin" style={navButtonStyle}>Admin</Link>
+          <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+            <li style={{ marginBottom: '8px' }}>
+              <Link to="/settings" style={subNavButtonStyle}>Settings</Link>
+            </li>
+            <li>
+              <Link to="/diagnostics" style={subNavButtonStyle}>Diagnostics</Link>
+            </li>
+          </ul>
         </li>
         <li style={{ marginBottom: '10px' }}>
           <Link to="/audits" style={navButtonStyle}>Audits</Link>
