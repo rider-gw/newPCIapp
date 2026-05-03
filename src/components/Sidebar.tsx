@@ -3,6 +3,27 @@ import { Link } from 'react-router-dom';
 import { fetchUserAttributes, getCurrentUser, signOut } from '@aws-amplify/auth';
 import { safeWriteAuditLog } from '../services/auditLogStore';
 
+const navButtonStyle = {
+  display: 'block',
+  width: '100%',
+  boxSizing: 'border-box' as const,
+  textDecoration: 'none',
+  color: '#0d3b66',
+  backgroundColor: '#cfe9ff',
+  border: '1px solid #9bcfff',
+  borderRadius: '6px',
+  padding: '8px 10px',
+  fontWeight: 600,
+};
+
+const subNavButtonStyle = {
+  ...navButtonStyle,
+  backgroundColor: '#e6f4ff',
+  border: '1px solid #b8dcff',
+  fontWeight: 500,
+  padding: '7px 9px',
+};
+
 const Sidebar: FC = () => {
   const handleLogout = async () => {
     try {
@@ -39,54 +60,54 @@ const Sidebar: FC = () => {
     }}>
       <ul style={{ listStyle: 'none', padding: 0 }}>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/home" style={{ textDecoration: 'none', color: 'black' }}>Home</Link>
+          <Link to="/home" style={navButtonStyle}>Home</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/settings" style={{ textDecoration: 'none', color: 'black' }}>Settings</Link>
+          <Link to="/settings" style={navButtonStyle}>Settings</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/pci-requirements" style={{ textDecoration: 'none', color: 'black' }}>PCI Requirements</Link>
+          <Link to="/pci-requirements" style={navButtonStyle}>PCI Requirements</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/controls" style={{ textDecoration: 'none', color: 'black' }}>Controls</Link>
+          <Link to="/controls" style={navButtonStyle}>Controls</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/assets" style={{ textDecoration: 'none', color: 'black' }}>Assets</Link>
+          <Link to="/assets" style={navButtonStyle}>Assets</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/diagnostics" style={{ textDecoration: 'none', color: 'black' }}>Diagnostics</Link>
+          <Link to="/diagnostics" style={navButtonStyle}>Diagnostics</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/admin" style={{ textDecoration: 'none', color: 'black' }}>Admin</Link>
+          <Link to="/admin" style={navButtonStyle}>Admin</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/continuous-monitoring" style={{ textDecoration: 'none', color: 'black' }}>Continuous Monitoring</Link>
+          <Link to="/continuous-monitoring" style={navButtonStyle}>Continuous Monitoring</Link>
           <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/home" style={{ textDecoration: 'none', color: 'black' }}>Home</Link>
+              <Link to="/continuous-monitoring/home" style={subNavButtonStyle}>Home</Link>
             </li>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/set-rules" style={{ textDecoration: 'none', color: 'black' }}>Set Rules</Link>
+              <Link to="/continuous-monitoring/set-rules" style={subNavButtonStyle}>Set Rules</Link>
             </li>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/reports" style={{ textDecoration: 'none', color: 'black' }}>Reports</Link>
+              <Link to="/continuous-monitoring/reports" style={subNavButtonStyle}>Reports</Link>
             </li>
             <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring/new-modify-rule" style={{ textDecoration: 'none', color: 'black' }}>New/Modify Rule</Link>
+              <Link to="/continuous-monitoring/new-modify-rule" style={subNavButtonStyle}>New/Modify Rule</Link>
             </li>
             <li>
-              <Link to="/continuous-monitoring/test-rule" style={{ textDecoration: 'none', color: 'black' }}>Test Rule</Link>
+              <Link to="/continuous-monitoring/test-rule" style={subNavButtonStyle}>Test Rule</Link>
             </li>
           </ul>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/current-audit" style={{ textDecoration: 'none', color: 'black' }}>Current Audit</Link>
+          <Link to="/current-audit" style={navButtonStyle}>Current Audit</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/past-audits" style={{ textDecoration: 'none', color: 'black' }}>Past Audits</Link>
+          <Link to="/past-audits" style={navButtonStyle}>Past Audits</Link>
         </li>
         <li>
-          <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'black', cursor: 'pointer' }}>Logout</button>
+          <button onClick={handleLogout} style={{ ...navButtonStyle, cursor: 'pointer', textAlign: 'left' }}>Logout</button>
         </li>
       </ul>
     </nav>
