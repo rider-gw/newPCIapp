@@ -38,7 +38,7 @@ Required control fields:
 - Risk Summary
 - Implementation Notes
 
-The Assets page remains separate and stores data in the DynamoDB table named `assets`.
+The Assets page now uses an adapter-based service layer and is REST-first by default.
 
 Required asset fields:
 
@@ -46,8 +46,23 @@ Required asset fields:
 - Asset Type (`laptop`, `server`, `virtual`, `cloud`, `phone`)
 - Purchase cost
 
-Additional env vars required for direct DynamoDB access from the app:
+Microservice (REST) configuration:
 
+- `VITE_ASSET_PROVIDER=rest` (default)
+- `VITE_ASSET_API_BASE_URL` (for example: `https://asset-api.company.com` or `/api`)
+- `VITE_ASSET_API_ASSETS_PATH` (optional, defaults to `/assets`)
+- `VITE_ASSET_API_HEALTH_PATH` (optional, defaults to `/health`)
+- `VITE_ASSET_API_CONTRACT` (optional: `native` or `servicenow`)
+
+Local development with Vite proxy:
+
+- Keep `VITE_ASSET_API_BASE_URL=/api` in your frontend env.
+- Set `VITE_ASSET_API_PROXY_TARGET` to your local asset service, for example `http://localhost:4000`.
+- Run the microservice and Vite dev server together; browser calls to `/api/*` are proxied by Vite in dev mode.
+
+Legacy direct DynamoDB configuration (optional fallback):
+
+- `VITE_ASSET_PROVIDER=dynamodb`
 - `VITE_AWS_REGION`
 - `VITE_COGNITO_IDENTITY_POOL_ID`
 - `VITE_DDB_ASSETS_TABLE` (optional, defaults to `assets`)
@@ -56,6 +71,19 @@ Additional env vars required for direct DynamoDB access from the app:
 IAM note:
 
 - The authenticated role for your Cognito Identity Pool must allow `dynamodb:PutItem` and `dynamodb:Scan` on both the `assets` and `controls` tables.
+
+## Asset service architecture
+
+Asset pages call a single service API in `src/services/assetsStore.ts`.
+That file is a compatibility facade over `src/services/assets/assetService.ts`, which selects a provider adapter:
+
+- REST adapter: `src/services/assets/adapters/restAssetAdapter.ts`
+- DynamoDB adapter: `src/services/assets/adapters/dynamoDbAssetAdapter.ts`
+
+The REST adapter also supports payload contract adapters so external platforms can be integrated without changing UI components:
+
+- `native` contract for your internal microservice
+- `servicenow` example mapping as a template for future third-party adapters
 
 Currently, two official plugins are available:
 

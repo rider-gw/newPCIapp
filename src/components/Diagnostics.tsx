@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { getAssetsDiagnostics } from '../services/assetsStore'
+import { getAssetProvider, getAssetsDiagnostics } from '../services/assetsStore'
 import type { AssetsDiagnostics } from '../services/assetsStore'
 
 const sectionStyle: CSSProperties = {
@@ -12,6 +12,7 @@ const sectionStyle: CSSProperties = {
 }
 
 const Diagnostics = () => {
+  const assetProvider = getAssetProvider()
   const [diagnostics, setDiagnostics] = useState<AssetsDiagnostics | null>(null)
 
   const loadDiagnostics = async () => {
@@ -27,22 +28,35 @@ const Diagnostics = () => {
     <section style={{ padding: '24px', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Diagnostics</h2>
       <p style={{ marginTop: 0 }}>
-        Validate Cognito and DynamoDB setup for asset management.
+        Validate connectivity for the configured asset provider.
       </p>
 
       <div style={sectionStyle}>
-        <h3 style={{ marginTop: 0 }}>DynamoDB Diagnostics</h3>
+        <h3 style={{ marginTop: 0 }}>Asset Provider Diagnostics</h3>
         {!diagnostics ? (
           <p>Loading diagnostics...</p>
         ) : (
           <>
             <ul style={{ margin: '0 0 12px 0', paddingLeft: '20px' }}>
-              <li>Region: {diagnostics.region}</li>
-              <li>Table: {diagnostics.tableName}</li>
-              <li>Identity Pool configured: {diagnostics.identityPoolIdConfigured ? 'Yes' : 'No'}</li>
-              <li>User Pool configured: {diagnostics.userPoolIdConfigured ? 'Yes' : 'No'}</li>
+              <li>Provider: {diagnostics.provider}</li>
               <li>User signed in: {diagnostics.isSignedIn ? 'Yes' : 'No'}</li>
-              <li>AWS credentials available: {diagnostics.hasAwsCredentials ? 'Yes' : 'No'}</li>
+              {diagnostics.provider === 'rest' ? (
+                <>
+                  <li>API base URL: {diagnostics.baseUrl}</li>
+                  <li>Assets path: {diagnostics.assetsPath}</li>
+                  <li>Health path: {diagnostics.healthPath}</li>
+                  <li>API reachable: {diagnostics.reachable ? 'Yes' : 'No'}</li>
+                  <li>Health status code: {diagnostics.statusCode ?? 'n/a'}</li>
+                </>
+              ) : (
+                <>
+                  <li>Region: {diagnostics.region}</li>
+                  <li>Table: {diagnostics.tableName}</li>
+                  <li>Identity Pool configured: {diagnostics.identityPoolIdConfigured ? 'Yes' : 'No'}</li>
+                  <li>User Pool configured: {diagnostics.userPoolIdConfigured ? 'Yes' : 'No'}</li>
+                  <li>AWS credentials available: {diagnostics.hasAwsCredentials ? 'Yes' : 'No'}</li>
+                </>
+              )}
             </ul>
             {diagnostics.error ? (
               <p style={{ color: '#b00020', margin: 0 }}>{diagnostics.error}</p>
@@ -62,6 +76,10 @@ const Diagnostics = () => {
           Refresh Diagnostics
         </button>
       </div>
+
+      <p style={{ marginBottom: 0 }}>
+        Active provider: <strong>{assetProvider}</strong>
+      </p>
     </section>
   )
 }

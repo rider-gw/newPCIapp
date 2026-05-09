@@ -104,7 +104,7 @@ const Assets = () => {
       setAssets(loaded)
     } catch (loadError) {
       console.error(loadError)
-      setError(loadError instanceof Error ? loadError.message : 'Could not load assets from DynamoDB.')
+      setError(loadError instanceof Error ? loadError.message : 'Could not load assets from the asset service.')
     }
   }
 
@@ -138,12 +138,12 @@ const Assets = () => {
         type: 'change',
         details: `Manual asset add: ${formState.assetName.trim()} (${formState.assetType})`,
       })
-      setMessage('Asset saved to DynamoDB.')
+      setMessage('Asset saved to the asset service.')
       setFormState({ assetName: '', assetType: 'laptop', purchaseCost: '' })
       await loadAssets()
     } catch (saveError) {
       console.error(saveError)
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save asset to DynamoDB.')
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save asset to the asset service.')
     } finally {
       setIsSaving(false)
     }
@@ -184,7 +184,7 @@ const Assets = () => {
         type: 'change',
         details: `Bulk asset import: ${mappedAssets.length} records`,
       })
-      setMessage(`${mappedAssets.length} assets saved to DynamoDB.`)
+      setMessage(`${mappedAssets.length} assets saved to the asset service.`)
       await loadAssets()
     } catch (uploadError) {
       console.error(uploadError)
@@ -199,7 +199,7 @@ const Assets = () => {
     <section style={{ padding: '24px', textAlign: 'left' }}>
       <h2 style={{ marginTop: 0 }}>Assets</h2>
       <p style={{ marginTop: 0 }}>
-        Manage assets using manual entry or bulk Excel upload. Data is stored in DynamoDB.
+        Manage assets using manual entry or bulk Excel upload. Data is stored through the configured asset adapter.
       </p>
 
       <div style={sectionStyle}>
