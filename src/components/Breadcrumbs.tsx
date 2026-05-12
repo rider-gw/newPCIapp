@@ -71,6 +71,27 @@ const routeBreadcrumbs: Record<string, BreadcrumbItem[]> = {
     { label: 'Current Audit', to: '/current-audit' },
     { label: 'Scope', to: '/current-audit/scope' },
   ],
+  '/current-audit/scope/add': [
+    { label: 'Home', to: '/home' },
+    { label: 'Audits', to: '/audits' },
+    { label: 'Current Audit', to: '/current-audit' },
+    { label: 'Scope', to: '/current-audit/scope' },
+    { label: 'Add', to: '/current-audit/scope/add' },
+  ],
+  '/current-audit/scope/display': [
+    { label: 'Home', to: '/home' },
+    { label: 'Audits', to: '/audits' },
+    { label: 'Current Audit', to: '/current-audit' },
+    { label: 'Scope', to: '/current-audit/scope' },
+    { label: 'Display', to: '/current-audit/scope/display' },
+  ],
+  '/current-audit/scope/search-report': [
+    { label: 'Home', to: '/home' },
+    { label: 'Audits', to: '/audits' },
+    { label: 'Current Audit', to: '/current-audit' },
+    { label: 'Scope', to: '/current-audit/scope' },
+    { label: 'Search & Report', to: '/current-audit/scope/search-report' },
+  ],
   '/past-audits': [
     { label: 'Home', to: '/home' },
     { label: 'Audits', to: '/audits' },

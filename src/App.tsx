@@ -13,6 +13,9 @@ import Audits from './components/Audits';
 import ContinuousAudit from './components/ContinuousAudit';
 import CurrentAudit from './components/CurrentAudit';
 import CurrentAuditScope from './components/CurrentAuditScope';
+import CurrentAuditScopeAdd from './components/CurrentAuditScopeAdd';
+import CurrentAuditScopeDisplay from './components/CurrentAuditScopeDisplay';
+import CurrentAuditScopeSearchReport from './components/CurrentAuditScopeSearchReport';
 import PastAudits from './components/PastAudits';
 import ContinuousMonitoringHome from './components/ContinuousMonitoringHome';
 import ContinuousMonitoringSetRules from './components/ContinuousMonitoringSetRules';
@@ -43,6 +46,9 @@ function App() {
               <Route path="/continuous-monitoring/test-rule" element={<ContinuousMonitoringTestRule />} />
               <Route path="/current-audit" element={<CurrentAudit />} />
               <Route path="/current-audit/scope" element={<CurrentAuditScope />} />
+              <Route path="/current-audit/scope/add" element={<CurrentAuditScopeAdd />} />
+              <Route path="/current-audit/scope/display" element={<CurrentAuditScopeDisplay />} />
+              <Route path="/current-audit/scope/search-report" element={<CurrentAuditScopeSearchReport />} />
               <Route path="/past-audits" element={<PastAudits />} />
               <Route path="/" element={<Home />} />
             </Routes>

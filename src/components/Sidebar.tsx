@@ -27,18 +27,21 @@ const subNavButtonStyle = {
 const Sidebar: FC = () => {
   const location = useLocation();
   const adminPaths = ['/admin', '/settings', '/diagnostics'];
-  const auditsPaths = ['/audits', '/current-audit', '/current-audit/scope', '/past-audits', '/continuous-monitoring'];
+  const auditsPaths = ['/audits', '/current-audit', '/current-audit/scope', '/current-audit/scope/add', '/current-audit/scope/display', '/current-audit/scope/search-report', '/past-audits', '/continuous-monitoring'];
   const continuousMonitoringPaths = ['/continuous-monitoring'];
-  const currentAuditPaths = ['/current-audit', '/current-audit/scope'];
+  const currentAuditPaths = ['/current-audit', '/current-audit/scope', '/current-audit/scope/add', '/current-audit/scope/display', '/current-audit/scope/search-report'];
+  const scopePaths = ['/current-audit/scope', '/current-audit/scope/add', '/current-audit/scope/display', '/current-audit/scope/search-report'];
   const [adminOpen, setAdminOpen] = useState(() => adminPaths.some(p => location.pathname.startsWith(p)));
   const [auditsOpen, setAuditsOpen] = useState(() => auditsPaths.some(p => location.pathname.startsWith(p)));
   const [continuousMonitoringOpen, setContinuousMonitoringOpen] = useState(() => continuousMonitoringPaths.some(p => location.pathname.startsWith(p)));
   const [currentAuditOpen, setCurrentAuditOpen] = useState(() => currentAuditPaths.some(p => location.pathname.startsWith(p)));
+  const [scopeOpen, setScopeOpen] = useState(() => scopePaths.some(p => location.pathname.startsWith(p)));
 
   const handleAdminClick = () => setAdminOpen(prev => !prev);
   const handleAuditsClick = () => setAuditsOpen(prev => !prev);
   const handleContinuousMonitoringClick = () => setContinuousMonitoringOpen(prev => !prev);
   const handleCurrentAuditClick = () => setCurrentAuditOpen(prev => !prev);
+  const handleScopeClick = () => setScopeOpen(prev => !prev);
 
   const handleLogout = async () => {
     try {
@@ -161,8 +164,39 @@ const Sidebar: FC = () => {
                 </div>
                 {currentAuditOpen && (
                   <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
-                    <li>
-                      <Link to="/current-audit/scope" style={subNavButtonStyle}>Scope</Link>
+                    <li style={{ marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Link to="/current-audit/scope" style={{ ...subNavButtonStyle, flex: 1 }}>Scope</Link>
+                        <button
+                          onClick={handleScopeClick}
+                          style={{
+                            background: '#e6f4ff',
+                            border: '1px solid #b8dcff',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            padding: '7px 6px',
+                            color: '#0d3b66',
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}
+                          aria-label="Toggle Scope submenu"
+                        >
+                          {scopeOpen ? '▲' : '▼'}
+                        </button>
+                      </div>
+                      {scopeOpen && (
+                        <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+                          <li style={{ marginBottom: '8px' }}>
+                            <Link to="/current-audit/scope/add" style={subNavButtonStyle}>Add</Link>
+                          </li>
+                          <li style={{ marginBottom: '8px' }}>
+                            <Link to="/current-audit/scope/display" style={subNavButtonStyle}>Display</Link>
+                          </li>
+                          <li>
+                            <Link to="/current-audit/scope/search-report" style={subNavButtonStyle}>Search &amp; Report</Link>
+                          </li>
+                        </ul>
+                      )}
                     </li>
                   </ul>
                 )}
