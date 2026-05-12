@@ -12,6 +12,7 @@ import Admin from './components/Admin';
 import Audits from './components/Audits';
 import ContinuousAudit from './components/ContinuousAudit';
 import CurrentAudit from './components/CurrentAudit';
+import CurrentAuditScope from './components/CurrentAuditScope';
 import PastAudits from './components/PastAudits';
 import ContinuousMonitoringHome from './components/ContinuousMonitoringHome';
 import ContinuousMonitoringSetRules from './components/ContinuousMonitoringSetRules';
@@ -41,6 +42,7 @@ function App() {
               <Route path="/continuous-monitoring/new-modify-rule" element={<ContinuousMonitoringRuleEditor />} />
               <Route path="/continuous-monitoring/test-rule" element={<ContinuousMonitoringTestRule />} />
               <Route path="/current-audit" element={<CurrentAudit />} />
+              <Route path="/current-audit/scope" element={<CurrentAuditScope />} />
               <Route path="/past-audits" element={<PastAudits />} />
               <Route path="/" element={<Home />} />
             </Routes>

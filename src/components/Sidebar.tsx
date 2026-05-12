@@ -27,15 +27,18 @@ const subNavButtonStyle = {
 const Sidebar: FC = () => {
   const location = useLocation();
   const adminPaths = ['/admin', '/settings', '/diagnostics'];
-  const auditsPaths = ['/audits', '/current-audit', '/past-audits', '/continuous-monitoring'];
+  const auditsPaths = ['/audits', '/current-audit', '/current-audit/scope', '/past-audits', '/continuous-monitoring'];
   const continuousMonitoringPaths = ['/continuous-monitoring'];
+  const currentAuditPaths = ['/current-audit', '/current-audit/scope'];
   const [adminOpen, setAdminOpen] = useState(() => adminPaths.some(p => location.pathname.startsWith(p)));
   const [auditsOpen, setAuditsOpen] = useState(() => auditsPaths.some(p => location.pathname.startsWith(p)));
   const [continuousMonitoringOpen, setContinuousMonitoringOpen] = useState(() => continuousMonitoringPaths.some(p => location.pathname.startsWith(p)));
+  const [currentAuditOpen, setCurrentAuditOpen] = useState(() => currentAuditPaths.some(p => location.pathname.startsWith(p)));
 
   const handleAdminClick = () => setAdminOpen(prev => !prev);
   const handleAuditsClick = () => setAuditsOpen(prev => !prev);
   const handleContinuousMonitoringClick = () => setContinuousMonitoringOpen(prev => !prev);
+  const handleCurrentAuditClick = () => setCurrentAuditOpen(prev => !prev);
 
   const handleLogout = async () => {
     try {
@@ -137,7 +140,32 @@ const Sidebar: FC = () => {
           {auditsOpen && (
             <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
               <li style={{ marginBottom: '8px' }}>
-                <Link to="/current-audit" style={subNavButtonStyle}>Current Audit</Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Link to="/current-audit" style={{ ...subNavButtonStyle, flex: 1 }}>Current Audit</Link>
+                  <button
+                    onClick={handleCurrentAuditClick}
+                    style={{
+                      background: '#e6f4ff',
+                      border: '1px solid #b8dcff',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      padding: '7px 6px',
+                      color: '#0d3b66',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                    aria-label="Toggle Current Audit submenu"
+                  >
+                    {currentAuditOpen ? '▲' : '▼'}
+                  </button>
+                </div>
+                {currentAuditOpen && (
+                  <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+                    <li>
+                      <Link to="/current-audit/scope" style={subNavButtonStyle}>Scope</Link>
+                    </li>
+                  </ul>
+                )}
               </li>
               <li style={{ marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
