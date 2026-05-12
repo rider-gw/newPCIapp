@@ -27,9 +27,15 @@ const subNavButtonStyle = {
 const Sidebar: FC = () => {
   const location = useLocation();
   const adminPaths = ['/admin', '/settings', '/diagnostics'];
+  const auditsPaths = ['/audits', '/current-audit', '/past-audits', '/continuous-monitoring'];
+  const continuousMonitoringPaths = ['/continuous-monitoring'];
   const [adminOpen, setAdminOpen] = useState(() => adminPaths.some(p => location.pathname.startsWith(p)));
+  const [auditsOpen, setAuditsOpen] = useState(() => auditsPaths.some(p => location.pathname.startsWith(p)));
+  const [continuousMonitoringOpen, setContinuousMonitoringOpen] = useState(() => continuousMonitoringPaths.some(p => location.pathname.startsWith(p)));
 
   const handleAdminClick = () => setAdminOpen(prev => !prev);
+  const handleAuditsClick = () => setAuditsOpen(prev => !prev);
+  const handleContinuousMonitoringClick = () => setContinuousMonitoringOpen(prev => !prev);
 
   const handleLogout = async () => {
     try {
@@ -109,35 +115,75 @@ const Sidebar: FC = () => {
           )}
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/audits" style={navButtonStyle}>Audits</Link>
-          <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/current-audit" style={subNavButtonStyle}>Current Audit</Link>
-            </li>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/continuous-monitoring" style={subNavButtonStyle}>Continuous Monitoring</Link>
-              <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
-                <li style={{ marginBottom: '8px' }}>
-                  <Link to="/continuous-monitoring/home" style={subNavButtonStyle}>Home</Link>
-                </li>
-                <li style={{ marginBottom: '8px' }}>
-                  <Link to="/continuous-monitoring/set-rules" style={subNavButtonStyle}>Set Rules</Link>
-                </li>
-                <li style={{ marginBottom: '8px' }}>
-                  <Link to="/continuous-monitoring/reports" style={subNavButtonStyle}>Reports</Link>
-                </li>
-                <li style={{ marginBottom: '8px' }}>
-                  <Link to="/continuous-monitoring/new-modify-rule" style={subNavButtonStyle}>New/Modify Rule</Link>
-                </li>
-                <li>
-                  <Link to="/continuous-monitoring/test-rule" style={subNavButtonStyle}>Test Rule</Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link to="/past-audits" style={subNavButtonStyle}>Past Audits</Link>
-            </li>
-          </ul>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Link to="/audits" style={{ ...navButtonStyle, flex: 1 }}>Audits</Link>
+            <button
+              onClick={handleAuditsClick}
+              style={{
+                background: '#cfe9ff',
+                border: '1px solid #9bcfff',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                padding: '8px 6px',
+                color: '#0d3b66',
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+              aria-label="Toggle Audits submenu"
+            >
+              {auditsOpen ? '▲' : '▼'}
+            </button>
+          </div>
+          {auditsOpen && (
+            <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+              <li style={{ marginBottom: '8px' }}>
+                <Link to="/current-audit" style={subNavButtonStyle}>Current Audit</Link>
+              </li>
+              <li style={{ marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Link to="/continuous-monitoring" style={{ ...subNavButtonStyle, flex: 1 }}>Continuous Monitoring</Link>
+                  <button
+                    onClick={handleContinuousMonitoringClick}
+                    style={{
+                      background: '#e6f4ff',
+                      border: '1px solid #b8dcff',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      padding: '7px 6px',
+                      color: '#0d3b66',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                    aria-label="Toggle Continuous Monitoring submenu"
+                  >
+                    {continuousMonitoringOpen ? '▲' : '▼'}
+                  </button>
+                </div>
+                {continuousMonitoringOpen && (
+                  <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+                    <li style={{ marginBottom: '8px' }}>
+                      <Link to="/continuous-monitoring/home" style={subNavButtonStyle}>Home</Link>
+                    </li>
+                    <li style={{ marginBottom: '8px' }}>
+                      <Link to="/continuous-monitoring/set-rules" style={subNavButtonStyle}>Set Rules</Link>
+                    </li>
+                    <li style={{ marginBottom: '8px' }}>
+                      <Link to="/continuous-monitoring/reports" style={subNavButtonStyle}>Reports</Link>
+                    </li>
+                    <li style={{ marginBottom: '8px' }}>
+                      <Link to="/continuous-monitoring/new-modify-rule" style={subNavButtonStyle}>New/Modify Rule</Link>
+                    </li>
+                    <li>
+                      <Link to="/continuous-monitoring/test-rule" style={subNavButtonStyle}>Test Rule</Link>
+                    </li>
+                  </ul>
+                )}
+              </li>
+              <li>
+                <Link to="/past-audits" style={subNavButtonStyle}>Past Audits</Link>
+              </li>
+            </ul>
+          )}
         </li>
         <li>
           <button onClick={handleLogout} style={{ ...navButtonStyle, cursor: 'pointer', textAlign: 'left' }}>Logout</button>
