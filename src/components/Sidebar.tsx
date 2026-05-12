@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FC } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { fetchUserAttributes, getCurrentUser, signOut } from '@aws-amplify/auth';
 import { safeWriteAuditLog } from '../services/auditLogStore';
 
@@ -25,6 +25,12 @@ const subNavButtonStyle = {
 };
 
 const Sidebar: FC = () => {
+  const location = useLocation();
+  const adminPaths = ['/admin', '/settings', '/diagnostics'];
+  const [adminOpen, setAdminOpen] = useState(() => adminPaths.some(p => location.pathname.startsWith(p)));
+
+  const handleAdminClick = () => setAdminOpen(prev => !prev);
+
   const handleLogout = async () => {
     try {
       let userName = 'unknown';
@@ -72,15 +78,35 @@ const Sidebar: FC = () => {
           <Link to="/assets" style={navButtonStyle}>Assets</Link>
         </li>
         <li style={{ marginBottom: '10px' }}>
-          <Link to="/admin" style={navButtonStyle}>Admin</Link>
-          <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
-            <li style={{ marginBottom: '8px' }}>
-              <Link to="/settings" style={subNavButtonStyle}>Settings</Link>
-            </li>
-            <li>
-              <Link to="/diagnostics" style={subNavButtonStyle}>Diagnostics</Link>
-            </li>
-          </ul>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Link to="/admin" style={{ ...navButtonStyle, flex: 1 }}>Admin</Link>
+            <button
+              onClick={handleAdminClick}
+              style={{
+                background: '#cfe9ff',
+                border: '1px solid #9bcfff',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                padding: '8px 6px',
+                color: '#0d3b66',
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+              aria-label="Toggle Admin submenu"
+            >
+              {adminOpen ? '▲' : '▼'}
+            </button>
+          </div>
+          {adminOpen && (
+            <ul style={{ listStyle: 'none', paddingLeft: '14px', marginTop: '8px' }}>
+              <li style={{ marginBottom: '8px' }}>
+                <Link to="/settings" style={subNavButtonStyle}>Settings</Link>
+              </li>
+              <li>
+                <Link to="/diagnostics" style={subNavButtonStyle}>Diagnostics</Link>
+              </li>
+            </ul>
+          )}
         </li>
         <li style={{ marginBottom: '10px' }}>
           <Link to="/audits" style={navButtonStyle}>Audits</Link>
