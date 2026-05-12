@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-west-2:775422170903:table/pci-requirements",
+        "arn:aws:dynamodb:us-west-2:775422170903:table/pci-requirement-tests",
+        "arn:aws:dynamodb:us-west-2:775422170903:table/pci-requirement-tests/index/*",
+        "arn:aws:dynamodb:us-west-2:775422170903:table/pci-requirement-test-links"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:HeadObject"
+      ],
+      "Resource": "arn:aws:s3:::pci-evidence-uploads/*"
+    }
+  ]
+}
