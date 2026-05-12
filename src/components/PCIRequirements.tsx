@@ -250,6 +250,12 @@ const listStyle: CSSProperties = {
   marginTop: '16px',
 }
 
+const requirementListViewportStyle: CSSProperties = {
+  maxHeight: '560px',
+  overflowY: 'auto',
+  paddingRight: '4px',
+}
+
 const detailSectionStyle: CSSProperties = {
   backgroundColor: '#f8fafc',
   border: '1px solid #e2e8f0',
@@ -873,17 +879,19 @@ const PCIRequirements: FC = () => {
             <span style={{ color: '#64748b', fontSize: '0.95rem' }}>Select a requirement to view details</span>
           </div>
 
-          <div style={listStyle}>
-            {requirementsList.map((requirement) => (
-              <button
-                key={requirement.id}
-                type="button"
-                onClick={() => handleSelectRequirement(requirement.id)}
-                style={selectedButtonStyle(requirement.id === selectedRequirement?.id)}
-              >
-                {requirement.id} {requirement.definedApproach}
-              </button>
-            ))}
+          <div style={requirementListViewportStyle}>
+            <div style={listStyle}>
+              {requirementsList.map((requirement) => (
+                <button
+                  key={requirement.id}
+                  type="button"
+                  onClick={() => handleSelectRequirement(requirement.id)}
+                  style={selectedButtonStyle(requirement.id === selectedRequirement?.id)}
+                >
+                  {requirement.id} {requirement.definedApproach}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
